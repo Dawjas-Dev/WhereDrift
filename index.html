@@ -1,0 +1,1978 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DRIFT MAP</title>
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Firebase Compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --neon-pink: #ff2d95;
+  --neon-blue: #00f0ff;
+  --neon-purple: #b026ff;
+  --dark-bg: #0d0d1a;
+  --panel-bg: rgba(13, 13, 30, 0.92);
+  --glass-bg: rgba(20, 20, 45, 0.80);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --text-main: #e0e0f0;
+  --text-dim: #8888aa;
+}
+body {
+  font-family: 'Rajdhani', sans-serif;
+  background: var(--dark-bg);
+  color: var(--text-main);
+  overflow: hidden;
+  height: 100vh; height: 100dvh;
+  width: 100vw;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#map { position: absolute; inset: 0; z-index: 1; }
+.leaflet-tile-pane { filter: brightness(0.7) contrast(1.15) saturate(0.3) hue-rotate(200deg); }
+.leaflet-sat .leaflet-tile-pane { filter: none; }
+.leaflet-control-zoom { display: none !important; }
+.leaflet-control-attribution { font-size: 9px !important; opacity: 0.5; }
+.leaflet-popup-content-wrapper {
+  background: var(--panel-bg) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--neon-blue);
+  border-radius: 12px !important;
+  box-shadow: 0 0 20px rgba(0,240,255,0.25);
+  color: var(--text-main) !important;
+  padding: 0 !important;
+  min-width: 180px;
+}
+.leaflet-popup-content { margin: 0 !important; width: auto !important; }
+.leaflet-popup-tip { background: var(--panel-bg) !important; border: 1px solid var(--neon-blue); }
+.leaflet-popup-close-button { color: var(--neon-pink) !important; font-size: 22px !important; top: 6px !important; right: 10px !important; width: 28px !important; height: 28px !important; }
+.popup-mini { padding: 14px 18px; }
+.popup-mini h3 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  color: var(--neon-blue);
+  margin-bottom: 4px;
+  text-shadow: 0 0 8px rgba(0,240,255,0.5);
+}
+.popup-mini .popup-type {
+  font-size: 12px;
+  color: var(--neon-pink);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.popup-mini .popup-open-btn {
+  display: block;
+  margin-top: 10px;
+  background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+  text-align: center;
+  min-height: 36px;
+}
+.popup-mini .popup-open-btn:active { transform: scale(0.96); box-shadow: 0 0 18px var(--neon-pink); }
+.icon-svg {
+  width: 20px; height: 20px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+}
+.icon-svg-sm { width: 16px; height: 16px; }
+.icon-svg-lg { width: 24px; height: 24px; }
+.loading-screen {
+  position: fixed; inset: 0; z-index: 9998;
+  background: var(--dark-bg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  transition: opacity 0.6s;
+}
+.loading-screen.hidden { opacity: 0; pointer-events: none; }
+.loading-screen h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 28px;
+  color: var(--neon-blue);
+  text-shadow: 0 0 20px rgba(0,240,255,0.5);
+  margin-bottom: 24px;
+}
+.loading-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(0,240,255,0.2);
+  border-top: 3px solid var(--neon-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loading-spinner-sm {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(0,240,255,0.2);
+  border-top: 2px solid var(--neon-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.loading-text { color: var(--text-dim); font-size: 14px; margin-top: 16px; }
+.fab-cluster {
+  position: fixed; bottom: 28px; right: 16px;
+  z-index: 1000;
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+}
+.fab-btn {
+  width: 48px; height: 48px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,240,255,0.3);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  color: var(--neon-blue);
+  font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s;
+  box-shadow: 0 0 14px rgba(0,240,255,0.12);
+  -webkit-tap-highlight-color: transparent;
+}
+.fab-btn:active { transform: scale(0.92); background: rgba(0,240,255,0.15); }
+.fab-add {
+  width: 60px; height: 60px;
+  border-radius: 18px;
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+  box-shadow: 0 0 22px rgba(255,45,149,0.4);
+  animation: fabPulse 2.5s ease-in-out infinite;
+}
+.fab-add:active { transform: scale(0.92); }
+.fab-add .icon-svg { stroke-width: 2.5; }
+@keyframes fabPulse {
+  0%, 100% { box-shadow: 0 0 22px rgba(255,45,149,0.4); }
+  50% { box-shadow: 0 0 36px rgba(255,45,149,0.7); }
+}
+.zoom-controls {
+  position: fixed; bottom: 28px; left: 16px;
+  z-index: 1000;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.zoom-btn {
+  width: 44px; height: 44px;
+  border: 1px solid rgba(0,240,255,0.2);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  color: var(--neon-blue);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  -webkit-tap-highlight-color: transparent;
+}
+.zoom-btn:first-child { border-radius: 12px 12px 4px 4px; }
+.zoom-btn:last-child { border-radius: 4px 4px 12px 12px; }
+.zoom-btn:active { transform: scale(0.9); background: rgba(0,240,255,0.15); }
+.zoom-btn .icon-svg { width: 18px; height: 18px; stroke-width: 2.5; }
+.user-panel {
+  position: fixed; top: 14px; right: 14px;
+  z-index: 1000;
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: all 0.25s;
+  -webkit-tap-highlight-color: transparent;
+}
+.user-panel:active { transform: scale(0.96); }
+.user-info { line-height: 1.2; }
+.user-nick {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  color: var(--neon-blue);
+  text-shadow: 0 0 6px rgba(0,240,255,0.4);
+}
+.user-pts {
+  font-size: 11px;
+  color: var(--neon-pink);
+  font-weight: 600;
+  display: flex; align-items: center; gap: 4px;
+}
+.user-pts span { font-weight: 900; }
+.user-chevron { color: var(--text-dim); transition: transform 0.25s; }
+.user-panel.expanded .user-chevron { transform: rotate(180deg); }
+.user-expanded {
+  position: fixed; top: 62px; right: 14px;
+  z-index: 999;
+  width: 280px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(22px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  transform: translateY(-10px);
+  opacity: 0; pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.user-expanded.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+.ue-nick-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ue-nick {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 16px;
+  color: var(--neon-blue);
+  text-shadow: 0 0 12px rgba(0,240,255,0.4);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ue-edit-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.ue-edit-btn:active { color: var(--neon-blue); border-color: var(--neon-blue); background: rgba(0,240,255,0.1); }
+.ue-nick-edit { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
+.ue-nick-edit input {
+  flex: 1;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--neon-blue);
+  border-radius: 8px;
+  color: var(--text-main);
+  padding: 8px 10px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  outline: none;
+  min-height: 36px;
+  -webkit-appearance: none;
+}
+.ue-nick-edit button {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.ue-nick-save { background: rgba(0,255,136,0.15); color: #00ff88; }
+.ue-nick-save:active { background: rgba(0,255,136,0.3); }
+.ue-nick-cancel { background: rgba(255,45,149,0.1); color: var(--neon-pink); }
+.ue-nick-cancel:active { background: rgba(255,45,149,0.25); }
+.ue-rank {
+  font-size: 12px;
+  color: var(--neon-purple);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+}
+.ue-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ue-stat {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 12px 10px;
+  text-align: center;
+}
+.ue-stat-val {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+  color: var(--neon-pink);
+  text-shadow: 0 0 10px rgba(255,45,149,0.4);
+}
+.ue-stat-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+.ue-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  margin: 14px 0;
+}
+.ue-id-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.ue-id-val {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 9px;
+  color: rgba(255,255,255,0.3);
+  word-break: break-all;
+}
+.filter-panel {
+  position: fixed; top: 14px; left: 14px;
+  z-index: 1000;
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+.filter-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: var(--text-dim);
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 34px;
+}
+.filter-btn:active { transform: scale(0.94); }
+.filter-btn.active {
+  background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+  color: #fff;
+  border-color: var(--neon-pink);
+  box-shadow: 0 0 10px rgba(255,45,149,0.3);
+}
+.side-panel {
+  position: fixed; top: 0; right: 0;
+  width: 380px; max-width: 100vw;
+  height: 100vh; height: 100dvh;
+  z-index: 2000;
+  background: var(--panel-bg);
+  backdrop-filter: blur(24px);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -8px 0 40px rgba(0,0,0,0.6);
+  transform: translateX(110%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column;
+}
+.side-panel.open { transform: translateX(0); }
+.side-panel::-webkit-scrollbar { width: 4px; }
+.side-panel::-webkit-scrollbar-thumb { background: var(--neon-purple); border-radius: 4px; }
+.panel-overlay {
+  position: fixed; inset: 0; z-index: 1999;
+  background: rgba(0,0,0,0.5);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.35s;
+}
+.panel-overlay.open { opacity: 1; pointer-events: auto; }
+.sp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.sp-header h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 15px;
+  color: var(--neon-blue);
+  text-shadow: 0 0 10px rgba(0,240,255,0.4);
+}
+.sp-close {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.08);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+.sp-close:active { background: rgba(255,45,149,0.3); border-color: var(--neon-pink); color: var(--neon-pink); transform: scale(0.9); }
+.sp-body { padding: 16px 16px 32px; flex: 1; }
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--neon-blue);
+  margin-bottom: 6px;
+  text-shadow: 0 0 6px rgba(0,240,255,0.3);
+}
+.form-group input[type="text"],
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: var(--text-main);
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: 'Rajdhani', sans-serif;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  resize: vertical;
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 44px;
+}
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  border-color: var(--neon-blue);
+  box-shadow: 0 0 12px rgba(0,240,255,0.15);
+}
+.form-group select option { background: #1a1a2e; color: var(--text-main); }
+.btn-neon {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 22px;
+  border: none; border-radius: 10px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700; font-size: 14px;
+  text-transform: uppercase; letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.25s;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+}
+.btn-neon:active { transform: scale(0.96); }
+.btn-pink {
+  background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+  color: #fff;
+  box-shadow: 0 0 16px rgba(255,45,149,0.3);
+}
+.btn-pink:active { box-shadow: 0 0 28px rgba(255,45,149,0.6); }
+.btn-pink:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.btn-ghost {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-dim);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.btn-ghost:active { background: rgba(255,255,255,0.12); color: var(--text-main); }
+.btn-sm { padding: 8px 14px; font-size: 12px; border-radius: 7px; min-height: 36px; }
+.status-toggle { display: flex; gap: 8px; }
+.status-option {
+  flex: 1; padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  text-align: center; cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 700; font-size: 14px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+.status-option:active { transform: scale(0.96); }
+.status-option.selected-legal {
+  border-color: #00ff88; background: rgba(0,255,136,0.1);
+  color: #00ff88; box-shadow: 0 0 12px rgba(0,255,136,0.2);
+}
+.status-option.selected-illegal {
+  border-color: var(--neon-pink); background: rgba(255,45,149,0.1);
+  color: var(--neon-pink); box-shadow: 0 0 12px rgba(255,45,149,0.2);
+}
+.siren-bar { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.siren-icon {
+  font-size: 28px; cursor: pointer;
+  transition: all 0.15s;
+  filter: grayscale(1) opacity(0.3);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  padding: 4px;
+}
+.siren-icon.active {
+  filter: grayscale(0) opacity(1);
+  animation: sirenPulseSync 0.8s ease-in-out infinite;
+}
+.siren-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px; color: var(--neon-pink);
+  margin-left: 6px;
+  text-shadow: 0 0 6px rgba(255,45,149,0.4);
+}
+@keyframes sirenPulseSync {
+  0%, 100% { transform: scale(1); text-shadow: 0 0 4px rgba(255,0,0,0.3); }
+  50% { transform: scale(1.3); text-shadow: 0 0 20px rgba(255,0,0,0.9), 0 0 40px rgba(255,45,149,0.6); }
+}
+.detail-spot-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px; color: var(--neon-blue);
+  text-shadow: 0 0 14px rgba(0,240,255,0.4);
+  margin-bottom: 4px;
+  word-break: break-word; line-height: 1.3;
+}
+.detail-spot-type {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px; color: var(--neon-pink);
+  text-transform: uppercase; letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(255,45,149,0.4);
+  margin-bottom: 10px;
+}
+.detail-desc {
+  color: var(--text-main); font-size: 14px;
+  line-height: 1.5; margin-bottom: 14px;
+  white-space: pre-wrap; word-break: break-word;
+}
+.detail-status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+.badge-legal { background: rgba(0,255,136,0.12); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
+.badge-illegal { background: rgba(255,45,149,0.12); color: var(--neon-pink); border: 1px solid rgba(255,45,149,0.3); }
+.detail-cheap-entry {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700;
+  color: #00ff88;
+  background: rgba(0,255,136,0.08);
+  border: 1px solid rgba(0,255,136,0.2);
+  padding: 6px 14px; border-radius: 20px;
+  margin-bottom: 10px; margin-left: 6px;
+}
+.detail-sirens { display: flex; gap: 4px; margin-bottom: 14px; align-items: center; }
+.detail-sirens .siren-icon.active { animation: sirenPulseSync 0.8s ease-in-out infinite; }
+.divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent); margin: 14px 0; }
+.avg-rating-box {
+  background: rgba(255,215,0,0.06);
+  border: 1px solid rgba(255,215,0,0.15);
+  border-radius: 14px; padding: 16px;
+  margin-bottom: 12px; text-align: center;
+}
+.avg-rating-number {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 42px; font-weight: 900;
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.5), 0 0 40px rgba(255,215,0,0.2);
+  line-height: 1; margin-bottom: 6px;
+}
+.avg-rating-stars { display: flex; justify-content: center; gap: 4px; margin-bottom: 6px; }
+.avg-star { font-size: 24px; color: rgba(255,255,255,0.12); line-height: 1; }
+.avg-star.filled { color: #ffd700; text-shadow: 0 0 8px rgba(255,215,0,0.5); }
+.avg-rating-count { font-size: 12px; color: var(--text-dim); letter-spacing: 0.5px; }
+.user-rating-section {
+  background: rgba(0,240,255,0.04);
+  border: 1px solid rgba(0,240,255,0.12);
+  border-radius: 12px; padding: 14px;
+  margin-bottom: 12px;
+}
+.user-rating-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px; color: var(--neon-blue);
+  text-transform: uppercase; letter-spacing: 1.5px;
+  margin-bottom: 8px;
+  text-shadow: 0 0 6px rgba(0,240,255,0.3);
+}
+.user-stars-row { display: flex; gap: 6px; justify-content: center; }
+.user-star {
+  font-size: 32px; cursor: pointer;
+  color: rgba(255,255,255,0.15);
+  transition: all 0.15s;
+  user-select: none; line-height: 1; padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.user-star.filled { color: var(--neon-blue); text-shadow: 0 0 14px rgba(0,240,255,0.6); }
+.user-star:active { transform: scale(1.3); }
+.user-rating-note { font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 6px; }
+.comment-item {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 8px;
+}
+.comment-text { font-size: 13px; color: var(--text-main); line-height: 1.4; margin-bottom: 4px; word-break: break-word; }
+.comment-meta { font-size: 11px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px; }
+.comment-report {
+  cursor: pointer; color: var(--text-dim);
+  transition: color 0.2s; font-size: 11px;
+  display: flex; align-items: center; gap: 3px;
+  padding: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.comment-report:active { color: var(--neon-pink); }
+.comment-input-wrap { display: flex; gap: 8px; margin-top: 10px; }
+.comment-input-wrap input {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: var(--text-main);
+  padding: 10px 12px; font-size: 14px;
+  font-family: 'Rajdhani', sans-serif;
+  outline: none; min-height: 44px;
+  -webkit-appearance: none;
+}
+.comment-input-wrap input:focus { border-color: var(--neon-blue); }
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 5000;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+  padding: 20px;
+}
+.modal-overlay.open { opacity: 1; pointer-events: auto; }
+.modal-box {
+  background: var(--panel-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px; padding: 24px;
+  width: 320px; max-width: 100%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+.modal-box h3 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px; color: var(--neon-pink);
+  margin-bottom: 16px;
+  text-shadow: 0 0 8px rgba(255,45,149,0.4);
+  display: flex; align-items: center; gap: 8px;
+}
+.modal-option {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 12px 14px; margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-main);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px; cursor: pointer;
+  transition: all 0.2s; text-align: left;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+.modal-option:active { background: rgba(255,45,149,0.15); border-color: var(--neon-pink); transform: scale(0.97); }
+.add-mode-banner {
+  position: fixed; top: 70px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 1500;
+  background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+  color: #fff;
+  padding: 10px 24px; border-radius: 30px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase; letter-spacing: 1px;
+  box-shadow: 0 0 30px rgba(255,45,149,0.5);
+  display: none;
+  animation: bannerGlow 1.5s ease-in-out infinite;
+  cursor: pointer; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.add-mode-banner.show { display: flex; align-items: center; gap: 10px; }
+@keyframes bannerGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,45,149,0.4); }
+  50% { box-shadow: 0 0 40px rgba(255,45,149,0.7); }
+}
+.add-mode-cursor .leaflet-container { cursor: crosshair !important; }
+.add-mode-cursor .leaflet-grab { cursor: crosshair !important; }
+.toast {
+  position: fixed; bottom: 100px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  z-index: 6000;
+  background: var(--panel-bg);
+  border: 1px solid var(--neon-blue);
+  border-radius: 12px;
+  padding: 10px 22px;
+  font-size: 13px; color: var(--neon-blue);
+  box-shadow: 0 0 20px rgba(0,240,255,0.3);
+  opacity: 0; pointer-events: none;
+  transition: all 0.3s;
+  white-space: nowrap;
+  max-width: 90vw;
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.section-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px; color: var(--neon-blue);
+  text-transform: uppercase; letter-spacing: 1.5px;
+  margin-bottom: 8px;
+  text-shadow: 0 0 6px rgba(0,240,255,0.3);
+}
+.detail-loading { text-align: center; padding: 40px 20px; }
+.detail-loading p { margin-top: 14px; color: var(--text-dim); font-size: 13px; }
+#root { display: none; }
+@media (max-width: 600px) {
+  .side-panel { width: 100vw; border-left: none; border-radius: 0; }
+  .filter-panel { left: 10px; top: 10px; padding: 5px 8px; gap: 4px; }
+  .filter-btn { padding: 6px 10px; font-size: 12px; }
+  .user-panel { top: 10px; right: 10px; padding: 6px 10px; }
+  .user-nick { font-size: 10px; }
+  .user-expanded { top: 54px; right: 10px; width: 260px; padding: 16px; }
+  .fab-cluster { bottom: 20px; right: 12px; }
+  .fab-btn { width: 44px; height: 44px; }
+  .fab-add { width: 56px; height: 56px; }
+  .zoom-controls { bottom: 20px; left: 12px; }
+  .zoom-btn { width: 40px; height: 40px; }
+  .add-mode-banner { font-size: 10px; padding: 8px 16px; top: 58px; max-width: 90vw; }
+  .avg-rating-number { font-size: 36px; }
+  .avg-star { font-size: 20px; }
+  .user-star { font-size: 28px; }
+  .sp-body { padding: 14px 14px 40px; }
+}
+@media (max-width: 360px) {
+  .filter-panel { flex-wrap: wrap; }
+  .fab-add { width: 50px; height: 50px; }
+  .user-expanded { width: 220px; }
+}
+</style>
+</head>
+<body>
+<div class="loading-screen" id="loadingScreen">
+  <h1>DRIFT MAP</h1>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Łączenie z bazą danych...</div>
+</div>
+<div id="map"></div>
+<div class="panel-overlay" id="panelOverlay" onclick="closeSidePanel()"></div>
+<div class="add-mode-banner" id="addBanner" onclick="cancelAddMode()">
+  Kliknij na mapę aby wybrać lokalizację
+  <svg class="icon-svg icon-svg-sm" style="stroke:#fff;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+</div>
+<div class="user-panel" id="userPanel" onclick="toggleUserExpanded(event)">
+  <div class="user-info">
+    <div class="user-nick" id="userNick"></div>
+    <div class="user-pts">
+      <svg class="icon-svg" style="width:12px;height:12px;stroke:var(--neon-pink);"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9"/></svg>
+      <span id="userPts">0</span> pkt
+    </div>
+  </div>
+  <div class="user-chevron">
+    <svg class="icon-svg icon-svg-sm" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+</div>
+<div class="user-expanded" id="userExpanded">
+  <div class="ue-nick-row" id="ueNickRow">
+    <div class="ue-nick" id="ueNick"></div>
+    <button class="ue-edit-btn" onclick="startEditNick()" title="Zmień nick">
+      <svg class="icon-svg" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+    </button>
+  </div>
+  <div class="ue-nick-edit" id="ueNickEdit" style="display:none;">
+    <input type="text" id="ueNickInput" maxlength="24" placeholder="Nowy nick" onkeydown="if(event.key==='Enter')saveNewNick()">
+    <button class="ue-nick-save" onclick="saveNewNick()">
+      <svg class="icon-svg" viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#00ff88;"><polyline points="20 6 9 17 4 12"/></svg>
+    </button>
+    <button class="ue-nick-cancel" onclick="cancelEditNick()">
+      <svg class="icon-svg" viewBox="0 0 24 24" style="width:16px;height:16px;stroke:var(--neon-pink);"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="ue-rank" id="ueRank">Początkujący</div>
+  <div class="ue-stats">
+    <div class="ue-stat">
+      <div class="ue-stat-val" id="uePts">0</div>
+      <div class="ue-stat-label">Punkty</div>
+    </div>
+    <div class="ue-stat">
+      <div class="ue-stat-val" id="ueSpots">0</div>
+      <div class="ue-stat-label">Miejscówki</div>
+    </div>
+    <div class="ue-stat">
+      <div class="ue-stat-val" id="ueComments">0</div>
+      <div class="ue-stat-label">Komentarze</div>
+    </div>
+    <div class="ue-stat">
+      <div class="ue-stat-val" id="ueRatings">0</div>
+      <div class="ue-stat-label">Oceny</div>
+    </div>
+  </div>
+  <div class="ue-divider"></div>
+  <div class="ue-id-label">Twój identyfikator</div>
+  <div class="ue-id-val" id="ueId"></div>
+</div>
+<div class="filter-panel" id="filterPanel">
+  <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">All</button>
+  <button class="filter-btn" data-filter="legal" onclick="setFilter('legal', this)">Legal</button>
+  <button class="filter-btn" data-filter="illegal" onclick="setFilter('illegal', this)">Illegal</button>
+</div>
+<div class="zoom-controls">
+  <button class="zoom-btn" onclick="map.zoomIn()" title="Powiększ">
+    <svg class="icon-svg" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+  <button class="zoom-btn" onclick="map.zoomOut()" title="Pomniejsz">
+    <svg class="icon-svg" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+</div>
+<div class="fab-cluster">
+  <button class="fab-btn" id="btnLocate" title="Moja lokalizacja" onclick="locateUser()">
+    <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="8" fill="none"/></svg>
+  </button>
+  <button class="fab-btn" id="btnSat" title="Zmień mapę" onclick="toggleMapLayer()">
+    <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
+  </button>
+  <button class="fab-btn fab-add" id="btnAdd" title="Dodaj miejscówkę" onclick="enterAddMode()">
+    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+</div>
+<div class="side-panel" id="sidePanel">
+  <div class="sp-header">
+    <h2 id="spTitle">Panel</h2>
+    <button class="sp-close" id="spCloseBtn" onclick="closeSidePanel()">
+      <svg class="icon-svg" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="sp-body" id="spBody"></div>
+</div>
+<div class="modal-overlay" id="reportModal" onclick="if(event.target===this)closeReportModal()">
+  <div class="modal-box">
+    <h3>
+      <svg class="icon-svg" style="stroke:var(--neon-pink);width:18px;height:18px;" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      Zgłoś
+    </h3>
+    <button class="modal-option" onclick="handleSubmitReport('nie istnieje')">Nie istnieje</button>
+    <button class="modal-option" onclick="handleSubmitReport('prywatny teren')">Prywatny teren</button>
+    <button class="modal-option" onclick="handleSubmitReport('spam')">Spam</button>
+    <button class="modal-option" style="color:var(--text-dim);margin-top:8px;justify-content:center;" onclick="closeReportModal()">Anuluj</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div id="root"></div>
+<script>
+/*
+ * ============================================
+ * DRIFT MAP – CHUNK-BASED ULTRA OPTIMIZATION
+ * ============================================
+ *
+ * FIRESTORE STRUCTURE:
+ *
+ * meta/config
+ *   version, lastChunkIndex, lastChunkSize
+ *
+ * chunks/{0,1,2...}
+ *   spots: [ { id, title, type, status, lat, lng, heat, cheapEntry }, ... ]
+ *   Max ~400 spots per chunk doc (well under 1MB limit)
+ *
+ * spots/{spotId}  (full detail – loaded lazily on click)
+ *   title, desc, type, status, heat, lat, lng, cheapEntry
+ *   authorId, authorNick, createdAt
+ *   ratingSum, ratingCount, commentCount
+ *
+ *   spots/{spotId}/comments/{commentId}
+ *     text, userId, userNick, createdAt
+ *
+ * users/{userId}
+ *   nick, points, spotsCount, commentsCount, ratingsCount, createdAt
+ *
+ * reports/{reportId}
+ *   type, targetId, spotId, reason, reporterId, reporterNick, createdAt
+ *
+ * READ OPTIMIZATION:
+ * - Version check on load: 1 read (meta/config)
+ * - If version matches localStorage cache: 0 more reads for spots!
+ * - If version differs: K reads (number of chunk docs, typically 1-3)
+ * - Detail view: 1 read per unique spot (cached 5 min in memory)
+ * - Comments: N reads per spot (cached 5 min)
+ * - Polling every 90s: 1 read (meta/config), 0 if version unchanged
+ * - User ratings stored 100% in localStorage: 0 reads
+ *
+ * EXAMPLE: 500 spots, user views 5 details, 1 hour session:
+ *   Cache hit: 1 (meta) + 5 (details) + ~25 (comments) + 40 (polls) = 71 reads
+ *   vs. original onSnapshot: 500 (initial) + 5 (changes) = 505 reads
+ *   = 86% FEWER READS
+ */
+/* ============================================
+   FIREBASE CONFIG
+   ============================================ */
+var firebaseConfig = {
+  apiKey: "AIzaSyBBy00Jo3nAWIHB8E_gm3moun3XdfFpeDw",
+  authDomain: "driftapp-71016.firebaseapp.com",
+  projectId: "driftapp-71016",
+  storageBucket: "driftapp-71016.firebasestorage.app",
+  messagingSenderId: "688583845911",
+  appId: "1:688583845911:web:136c86a11af67917891452"
+};
+/* ============================================
+   CONSTANTS
+   ============================================ */
+var USER_KEY       = 'driftmap_user';
+var RATINGS_KEY    = 'driftmap_my_ratings';
+var SPOTS_CACHE_KEY = 'driftmap_spots_v3';
+var META_CACHE_KEY  = 'driftmap_meta_v2';
+var MAP_VIEW_KEY    = 'driftmap_map_view';
+var DETAIL_CACHE_TTL   = 300000;  // 5 min
+var COMMENTS_CACHE_TTL = 300000;  // 5 min
+var VERSION_POLL_MS    = 90000;   // 90 sec
+var CHUNK_MAX_SIZE     = 400;
+/* ============================================
+   LOCAL USER
+   ============================================ */
+function getLocalUser() {
+  var u;
+  try { u = JSON.parse(localStorage.getItem(USER_KEY)); } catch(e) {}
+  if (!u || !u.id) {
+    u = {
+      id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8),
+      nick: generateNick(),
+      points: 0, spotsCount: 0, commentsCount: 0, ratingsCount: 0
+    };
+    localStorage.setItem(USER_KEY, JSON.stringify(u));
+  }
+  if (typeof u.spotsCount === 'undefined') u.spotsCount = 0;
+  if (typeof u.commentsCount === 'undefined') u.commentsCount = 0;
+  if (typeof u.ratingsCount === 'undefined') u.ratingsCount = 0;
+  return u;
+}
+function updateLocalUser(data) {
+  var u = getLocalUser();
+  for (var k in data) u[k] = data[k];
+  localStorage.setItem(USER_KEY, JSON.stringify(u));
+}
+function generateNick() {
+  var a = ['Shadow','Turbo','Neon','Night','Drift','Nitro','Smoke','Ghost','Dark','Storm','Fury','Blaze','Cyber','Hyper','Ultra'];
+  var n = ['Rider','Racer','Drifter','Runner','Driver','Fox','Wolf','Hawk','Phantom','Pilot','King','Ronin','Samurai','Viper','Ace'];
+  return a[Math.floor(Math.random()*a.length)] + n[Math.floor(Math.random()*n.length)] + Math.floor(Math.random()*999);
+}
+function getRank(p) {
+  if (p >= 100) return 'Drift King';
+  if (p >= 50) return 'Pro Drifter';
+  if (p >= 25) return 'Street Racer';
+  if (p >= 10) return 'Rookie Drifter';
+  return 'Początkujący';
+}
+/* ============================================
+   LOCAL RATINGS (0 Firestore reads!)
+   ============================================ */
+function getMyRatings() {
+  try { return JSON.parse(localStorage.getItem(RATINGS_KEY)) || {}; } catch(e) { return {}; }
+}
+function getMyRating(spotId) { return getMyRatings()[spotId] || 0; }
+function setMyRating(spotId, val) {
+  var r = getMyRatings(); r[spotId] = val;
+  localStorage.setItem(RATINGS_KEY, JSON.stringify(r));
+}
+/* ============================================
+   SPOTS CACHE (localStorage, version-gated)
+   ============================================ */
+function getSpotsFromStorage() {
+  try { return JSON.parse(localStorage.getItem(SPOTS_CACHE_KEY)) || { version: -1, spots: {} }; }
+  catch(e) { return { version: -1, spots: {} }; }
+}
+function saveSpotsToStorage(version, spots) {
+  try {
+    localStorage.setItem(SPOTS_CACHE_KEY, JSON.stringify({ version: version, spots: spots }));
+  } catch(e) { console.warn('Spots cache save failed:', e); }
+}
+/* ============================================
+   META CACHE (localStorage)
+   ============================================ */
+function getCachedMeta() {
+  try { return JSON.parse(localStorage.getItem(META_CACHE_KEY)) || { version: 0, lastChunkIndex: 0, lastChunkSize: 0 }; }
+  catch(e) { return { version: 0, lastChunkIndex: 0, lastChunkSize: 0 }; }
+}
+function updateLocalMeta(data) {
+  var m = getCachedMeta();
+  for (var k in data) m[k] = data[k];
+  try { localStorage.setItem(META_CACHE_KEY, JSON.stringify(m)); } catch(e) {}
+}
+/* ============================================
+   MAP VIEW PERSISTENCE
+   ============================================ */
+function getSavedMapView() {
+  try { return JSON.parse(localStorage.getItem(MAP_VIEW_KEY)); } catch(e) { return null; }
+}
+function saveMapView() {
+  try {
+    var c = map.getCenter();
+    localStorage.setItem(MAP_VIEW_KEY, JSON.stringify({ lat: c.lat, lng: c.lng, zoom: map.getZoom() }));
+  } catch(e) {}
+}
+/* ============================================
+   FIREBASE INIT
+   ============================================ */
+var db = null;
+function initFirebase(config) {
+  try {
+    if (firebase.apps.length === 0) firebase.initializeApp(config);
+    db = firebase.firestore();
+    db.enablePersistence({ synchronizeTabs: true }).catch(function(e) { console.warn('Persistence:', e.code); });
+    return true;
+  } catch(e) { console.error('Firebase init failed:', e); return false; }
+}
+/* ============================================
+   SPOTS CACHE (in-memory, from chunks)
+   ============================================ */
+var spotsCache = {};            // { spotId: summaryData }
+var detailCache = {};           // { spotId: { data, loadedAt } }
+var commentsCache = {};         // { spotId: { comments, loadedAt } }
+var currentDetailSpotId = null;
+/* ============================================
+   VERSION CHECK & CHUNK LOADING
+   ============================================ */
+async function checkVersionAndLoadChunks() {
+  // 1. Read meta/config – 1 Firestore read
+  var metaSnap = await db.collection('meta').doc('config').get();
+  var serverVersion = 0;
+  var metaData = { version: 0, lastChunkIndex: 0, lastChunkSize: 0 };
+  if (metaSnap.exists) {
+    metaData = metaSnap.data();
+    serverVersion = metaData.version || 0;
+  }
+  // 2. Compare with localStorage cache
+  var cached = getSpotsFromStorage();
+  if (cached.version === serverVersion && serverVersion > 0) {
+    // CACHE HIT – 0 more reads!
+    spotsCache = cached.spots;
+    updateLocalMeta(metaData);
+    return { hit: true, count: Object.keys(spotsCache).length };
+  }
+  // 3. CACHE MISS – load all chunk documents
+  var chunksSnap = await db.collection('chunks').get();
+  var allSpots = {};
+  chunksSnap.docs.forEach(function(doc) {
+    var data = doc.data();
+    if (data.spots && Array.isArray(data.spots)) {
+      data.spots.forEach(function(s) {
+        allSpots[s.id] = s;
+      });
+    }
+  });
+  spotsCache = allSpots;
+  saveSpotsToStorage(serverVersion, allSpots);
+  updateLocalMeta(metaData);
+  return { hit: false, count: Object.keys(allSpots).length, chunks: chunksSnap.size };
+}
+/* ============================================
+   VERSION POLLING (only when tab is visible)
+   ============================================ */
+var pollTimer = null;
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(checkForUpdates, VERSION_POLL_MS);
+}
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+async function checkForUpdates() {
+  try {
+    var metaSnap = await db.collection('meta').doc('config').get();
+    if (!metaSnap.exists) return;
+    var serverVersion = metaSnap.data().version || 0;
+    var localMeta = getCachedMeta();
+    if (serverVersion !== localMeta.version) {
+      // Version changed – reload chunks
+      var chunksSnap = await db.collection('chunks').get();
+      var allSpots = {};
+      chunksSnap.docs.forEach(function(doc) {
+        var data = doc.data();
+        if (data.spots && Array.isArray(data.spots)) {
+          data.spots.forEach(function(s) { allSpots[s.id] = s; });
+        }
+      });
+      spotsCache = allSpots;
+      saveSpotsToStorage(serverVersion, allSpots);
+      updateLocalMeta(metaSnap.data());
+      renderMarkers();
+      showToast('Mapa zaktualizowana (' + Object.keys(allSpots).length + ' spots)');
+    }
+  } catch(e) { console.warn('Poll error:', e); }
+}
+document.addEventListener('visibilitychange', function() {
+  if (!db) return;
+  if (document.visibilityState === 'visible') {
+    checkForUpdates();
+    startPolling();
+  } else {
+    stopPolling();
+  }
+});
+/* ============================================
+   SPOT DETAIL LOADING (lazy, cached 5 min)
+   ============================================ */
+async function loadSpotDetail(spotId) {
+  // Check memory cache
+  if (detailCache[spotId] && Date.now() - detailCache[spotId].loadedAt < DETAIL_CACHE_TTL) {
+    return detailCache[spotId].data;
+  }
+  // 1 Firestore read
+  var doc = await db.collection('spots').doc(spotId).get();
+  if (!doc.exists) return null;
+  var d = doc.data();
+  var detail = {
+    id: doc.id,
+    title: d.title || '',
+    desc: d.desc || '',
+    type: d.type || '',
+    status: d.status || 'legalna',
+    heat: d.heat || 0,
+    lat: d.lat || 0,
+    lng: d.lng || 0,
+    cheapEntry: d.cheapEntry || '',
+    authorId: d.authorId || '',
+    authorNick: d.authorNick || '',
+    createdAt: d.createdAt ? d.createdAt.toMillis() : Date.now(),
+    ratingSum: d.ratingSum || 0,
+    ratingCount: d.ratingCount || 0,
+    commentCount: d.commentCount || 0
+  };
+  detailCache[spotId] = { data: detail, loadedAt: Date.now() };
+  return detail;
+}
+/* ============================================
+   COMMENTS (lazy, cached 5 min)
+   ============================================ */
+async function getCommentsFromFirestore(spotId, forceReload) {
+  if (!forceReload && commentsCache[spotId]) {
+    if (Date.now() - commentsCache[spotId].loadedAt < COMMENTS_CACHE_TTL) {
+      return commentsCache[spotId].comments;
+    }
+  }
+  var snap = await db.collection('spots').doc(spotId)
+    .collection('comments').orderBy('createdAt', 'asc').get();
+  var comments = snap.docs.map(function(doc) {
+    var d = doc.data();
+    return {
+      id: doc.id,
+      text: d.text || '',
+      userId: d.userId || '',
+      userNick: d.userNick || '',
+      date: d.createdAt ? d.createdAt.toMillis() : Date.now()
+    };
+  });
+  commentsCache[spotId] = { comments: comments, loadedAt: Date.now() };
+  return comments;
+}
+async function addCommentToFirestore(spotId, text) {
+  var user = getLocalUser();
+  var batch = db.batch();
+  var commentRef = db.collection('spots').doc(spotId).collection('comments').doc();
+  batch.set(commentRef, {
+    text: text, userId: user.id, userNick: user.nick,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  batch.update(db.collection('spots').doc(spotId), {
+    commentCount: firebase.firestore.FieldValue.increment(1)
+  });
+  batch.set(db.collection('users').doc(user.id), {
+    points: firebase.firestore.FieldValue.increment(2),
+    commentsCount: firebase.firestore.FieldValue.increment(1)
+  }, { merge: true });
+  await batch.commit();
+  var newComment = { id: commentRef.id, text: text, userId: user.id, userNick: user.nick, date: Date.now() };
+  if (commentsCache[spotId]) {
+    commentsCache[spotId].comments.push(newComment);
+  } else {
+    commentsCache[spotId] = { comments: [newComment], loadedAt: Date.now() };
+  }
+  // Update detail cache optimistically
+  if (detailCache[spotId]) {
+    detailCache[spotId].data.commentCount += 1;
+  }
+  updateLocalUser({
+    points: (getLocalUser().points || 0) + 2,
+    commentsCount: (getLocalUser().commentsCount || 0) + 1
+  });
+  renderUserPanel();
+  return newComment;
+}
+/* ============================================
+   ADD SPOT (with chunk update)
+   0 reads, batch write
+   ============================================ */
+async function saveSpotToFirestore(spotData) {
+  var user = getLocalUser();
+  var meta = getCachedMeta();
+  var chunkIndex = meta.lastChunkIndex || 0;
+  var chunkSize = meta.lastChunkSize || 0;
+  var newChunk = false;
+  if (chunkSize >= CHUNK_MAX_SIZE) {
+    chunkIndex = chunkIndex + 1;
+    chunkSize = 0;
+    newChunk = true;
+  }
+  var spotRef = db.collection('spots').doc();
+  var spotId = spotRef.id;
+  // Summary for chunk (lightweight – for map display only)
+  var summary = {
+    id: spotId,
+    title: spotData.title,
+    type: spotData.type,
+    status: spotData.status,
+    lat: spotData.lat,
+    lng: spotData.lng,
+    heat: spotData.heat || 0,
+    cheapEntry: spotData.cheapEntry || ''
+  };
+  var batch = db.batch();
+  // 1. Full spot document
+  batch.set(spotRef, {
+    title: spotData.title,
+    desc: spotData.desc,
+    type: spotData.type,
+    status: spotData.status,
+    heat: spotData.heat || 0,
+    lat: spotData.lat,
+    lng: spotData.lng,
+    cheapEntry: spotData.cheapEntry || '',
+    authorId: user.id,
+    authorNick: user.nick,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    ratingSum: 0,
+    ratingCount: 0,
+    commentCount: 0
+  });
+  // 2. Add summary to chunk (arrayUnion – works for new & existing docs)
+  var chunkRef = db.collection('chunks').doc(String(chunkIndex));
+  batch.set(chunkRef, {
+    spots: firebase.firestore.FieldValue.arrayUnion(summary)
+  }, { merge: true });
+  // 3. Update meta (version with increment for safety)
+  var metaUpdate = { version: firebase.firestore.FieldValue.increment(1) };
+  if (newChunk) {
+    metaUpdate.lastChunkIndex = chunkIndex;
+    metaUpdate.lastChunkSize = 1;
+  } else {
+    metaUpdate.lastChunkSize = firebase.firestore.FieldValue.increment(1);
+  }
+  batch.set(db.collection('meta').doc('config'), metaUpdate, { merge: true });
+  // 4. Update user
+  batch.set(db.collection('users').doc(user.id), {
+    points: firebase.firestore.FieldValue.increment(5),
+    spotsCount: firebase.firestore.FieldValue.increment(1)
+  }, { merge: true });
+  await batch.commit();
+  // Update local caches
+  var newVersion = (meta.version || 0) + 1;
+  updateLocalMeta({
+    version: newVersion,
+    lastChunkIndex: chunkIndex,
+    lastChunkSize: newChunk ? 1 : (chunkSize + 1)
+  });
+  spotsCache[spotId] = summary;
+  saveSpotsToStorage(newVersion, spotsCache);
+  updateLocalUser({
+    points: (user.points || 0) + 5,
+    spotsCount: (user.spotsCount || 0) + 1
+  });
+  renderUserPanel();
+  renderMarkers();
+  return spotId;
+}
+/* ============================================
+   RATE SPOT (0 reads, 1 write + optimistic UI)
+   ============================================ */
+async function rateSpot(spotId, newValue) {
+  var user = getLocalUser();
+  var oldValue = getMyRating(spotId);
+  var isNew = (oldValue === 0);
+  var sumDiff = newValue - oldValue;
+  var updateData = { ratingSum: firebase.firestore.FieldValue.increment(sumDiff) };
+  if (isNew) updateData.ratingCount = firebase.firestore.FieldValue.increment(1);
+  await db.collection('spots').doc(spotId).update(updateData);
+  setMyRating(spotId, newValue);
+  // Optimistic: update detail cache
+  if (detailCache[spotId]) {
+    detailCache[spotId].data.ratingSum += sumDiff;
+    if (isNew) detailCache[spotId].data.ratingCount += 1;
+  }
+  if (isNew) {
+    await db.collection('users').doc(user.id).set({
+      points: firebase.firestore.FieldValue.increment(1),
+      ratingsCount: firebase.firestore.FieldValue.increment(1)
+    }, { merge: true });
+    updateLocalUser({
+      points: (getLocalUser().points || 0) + 1,
+      ratingsCount: (getLocalUser().ratingsCount || 0) + 1
+    });
+    renderUserPanel();
+  }
+  return isNew;
+}
+/* ============================================
+   REPORTS (0 reads, 1 write)
+   ============================================ */
+async function addReportToFirestore(reportData) {
+  var user = getLocalUser();
+  await db.collection('reports').add({
+    type: reportData.type,
+    targetId: reportData.targetId,
+    spotId: reportData.spotId,
+    reason: reportData.reason,
+    reporterId: user.id,
+    reporterNick: user.nick,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+/* ============================================
+   USER DOCUMENT (1 read per session)
+   ============================================ */
+async function ensureUserDocument() {
+  var user = getLocalUser();
+  var userRef = db.collection('users').doc(user.id);
+  var doc = await userRef.get();
+  if (!doc.exists) {
+    await userRef.set({
+      nick: user.nick, points: 0, spotsCount: 0,
+      commentsCount: 0, ratingsCount: 0,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } else {
+    var d = doc.data();
+    updateLocalUser({
+      nick: d.nick || user.nick,
+      points: d.points || 0,
+      spotsCount: d.spotsCount || 0,
+      commentsCount: d.commentsCount || 0,
+      ratingsCount: d.ratingsCount || 0
+    });
+  }
+}
+async function changeNickInFirestore(newNick) {
+  var user = getLocalUser();
+  await db.collection('users').doc(user.id).update({ nick: newNick });
+  updateLocalUser({ nick: newNick });
+}
+/* ============================================
+   MAP INIT (with saved position)
+   ============================================ */
+var savedView = getSavedMapView();
+var initCenter = savedView ? [savedView.lat, savedView.lng] : [52.23, 21.01];
+var initZoom = savedView ? savedView.zoom : 7;
+var map = L.map('map', { center: initCenter, zoom: initZoom, zoomControl: false });
+var darkTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap', maxZoom: 19
+});
+var satTile = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: '&copy; Esri', maxZoom: 19
+});
+darkTile.addTo(map);
+var currentLayer = 'dark';
+// Save position on every move/zoom
+map.on('moveend', saveMapView);
+map.on('zoomend', saveMapView);
+function toggleMapLayer() {
+  if (currentLayer === 'dark') {
+    map.removeLayer(darkTile); satTile.addTo(map);
+    document.getElementById('map').classList.add('leaflet-sat');
+    currentLayer = 'sat';
+  } else {
+    map.removeLayer(satTile); darkTile.addTo(map);
+    document.getElementById('map').classList.remove('leaflet-sat');
+    currentLayer = 'dark';
+  }
+}
+function createIcon(status) {
+  var color = status === 'illegal' ? '#ff2d95' : '#00f0ff';
+  var glow = status === 'illegal' ? 'rgba(255,45,149,0.6)' : 'rgba(0,240,255,0.6)';
+  return L.divIcon({
+    className: 'custom-marker',
+    html: '<div style="width:18px;height:18px;background:'+color+';border-radius:50%;border:2px solid #fff;box-shadow:0 0 14px '+glow+', 0 0 28px '+glow+';"></div>',
+    iconSize: [18,18], iconAnchor: [9,9], popupAnchor: [0,-14]
+  });
+}
+/* ============================================
+   MARKERS
+   ============================================ */
+var markersLayer = L.layerGroup().addTo(map);
+var currentFilter = 'all';
+function renderMarkers() {
+  markersLayer.clearLayers();
+  var spots = Object.values(spotsCache);
+  spots.forEach(function(spot) {
+    if (currentFilter === 'legal' && spot.status !== 'legalna') return;
+    if (currentFilter === 'illegal' && spot.status !== 'illegal') return;
+    var marker = L.marker([spot.lat, spot.lng], { icon: createIcon(spot.status) });
+    marker.bindPopup(function() {
+      var div = document.createElement('div');
+      div.className = 'popup-mini';
+      var extra = '';
+      if (spot.status === 'legalna' && spot.cheapEntry) {
+        extra = '<div style="font-size:11px;color:#00ff88;margin-top:4px;">💰 ' + escHtml(spot.cheapEntry) + '</div>';
+      }
+      div.innerHTML =
+        '<h3>' + escHtml(spot.title) + '</h3>' +
+        '<div class="popup-type">' + escHtml(spot.type) + '</div>' +
+        extra +
+        '<button class="popup-open-btn" onclick="openSpotDetail(\'' + spot.id + '\')">Szczegóły</button>';
+      return div;
+    }, { maxWidth: 250 });
+    marker.addTo(markersLayer);
+  });
+}
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderMarkers();
+}
+/* ============================================
+   ADD MODE
+   ============================================ */
+var addModeActive = false;
+function enterAddMode() {
+  if (addModeActive) { cancelAddMode(); return; }
+  addModeActive = true;
+  document.getElementById('addBanner').classList.add('show');
+  document.body.classList.add('add-mode-cursor');
+}
+function cancelAddMode() {
+  addModeActive = false;
+  document.getElementById('addBanner').classList.remove('show');
+  document.body.classList.remove('add-mode-cursor');
+}
+map.on('click', function(e) {
+  if (!addModeActive) return;
+  cancelAddMode();
+  openAddForm(e.latlng.lat, e.latlng.lng);
+});
+/* ============================================
+   SIDE PANEL
+   ============================================ */
+function openSidePanel(title) {
+  document.getElementById('spTitle').textContent = title;
+  document.getElementById('sidePanel').classList.add('open');
+  document.getElementById('panelOverlay').classList.add('open');
+  closeUserExpanded();
+}
+function closeSidePanel() {
+  document.getElementById('sidePanel').classList.remove('open');
+  document.getElementById('panelOverlay').classList.remove('open');
+  currentDetailSpotId = null;
+}
+/* ============================================
+   USER PANEL
+   ============================================ */
+function renderUserPanel() {
+  var u = getLocalUser();
+  document.getElementById('userNick').textContent = u.nick;
+  document.getElementById('userPts').textContent = u.points || 0;
+}
+var userExpOpen = false;
+function toggleUserExpanded(e) {
+  if (e) e.stopPropagation();
+  if (userExpOpen) closeUserExpanded(); else openUserExpanded();
+}
+function openUserExpanded() {
+  var u = getLocalUser();
+  document.getElementById('ueNick').textContent = u.nick;
+  document.getElementById('ueRank').textContent = getRank(u.points || 0);
+  document.getElementById('uePts').textContent = u.points || 0;
+  document.getElementById('ueSpots').textContent = u.spotsCount || 0;
+  document.getElementById('ueComments').textContent = u.commentsCount || 0;
+  document.getElementById('ueRatings').textContent = u.ratingsCount || 0;
+  document.getElementById('ueId').textContent = u.id;
+  document.getElementById('ueNickRow').style.display = 'flex';
+  document.getElementById('ueNickEdit').style.display = 'none';
+  document.getElementById('userExpanded').classList.add('open');
+  document.getElementById('userPanel').classList.add('expanded');
+  userExpOpen = true;
+}
+function closeUserExpanded() {
+  document.getElementById('userExpanded').classList.remove('open');
+  document.getElementById('userPanel').classList.remove('expanded');
+  userExpOpen = false;
+}
+document.addEventListener('click', function(e) {
+  if (userExpOpen) {
+    var p = document.getElementById('userPanel');
+    var ex = document.getElementById('userExpanded');
+    if (!p.contains(e.target) && !ex.contains(e.target)) closeUserExpanded();
+  }
+});
+/* ============================================
+   NICK CHANGE
+   ============================================ */
+function startEditNick() {
+  var u = getLocalUser();
+  document.getElementById('ueNickRow').style.display = 'none';
+  document.getElementById('ueNickEdit').style.display = 'flex';
+  var inp = document.getElementById('ueNickInput');
+  inp.value = u.nick; inp.focus(); inp.select();
+}
+function cancelEditNick() {
+  document.getElementById('ueNickRow').style.display = 'flex';
+  document.getElementById('ueNickEdit').style.display = 'none';
+}
+async function saveNewNick() {
+  var inp = document.getElementById('ueNickInput');
+  var n = inp.value.trim();
+  if (!n || n.length < 2) { showToast('Nick min. 2 znaki'); return; }
+  if (n.length > 24) { showToast('Nick max 24 znaki'); return; }
+  try {
+    await changeNickInFirestore(n);
+    renderUserPanel();
+    document.getElementById('ueNick').textContent = n;
+    cancelEditNick();
+    showToast('Nick zmieniony: ' + n);
+  } catch(e) { showToast('Błąd: ' + e.message); }
+}
+/* ============================================
+   ADD FORM (with cheapEntry for legal spots)
+   ============================================ */
+var formStatus = 'legalna';
+var formHeat = 0;
+function openAddForm(lat, lng) {
+  openSidePanel('Nowa miejscówka');
+  formStatus = 'legalna';
+  formHeat = 0;
+  var body = document.getElementById('spBody');
+  body.innerHTML =
+    '<form id="addSpotForm" onsubmit="handleSaveNewSpot(event, ' + lat + ', ' + lng + ')">' +
+      '<div class="form-group">' +
+        '<label>Tytuł</label>' +
+        '<input type="text" id="fTitle" required maxlength="60" placeholder="np. Parking pod Biedronką">' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label>Opis</label>' +
+        '<textarea id="fDesc" rows="3" placeholder="Opisz miejscówkę..." maxlength="500"></textarea>' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label>Typ miejscówki</label>' +
+        '<select id="fType">' +
+          '<option value="asfalt">Asfalt</option>' +
+          '<option value="beton">Beton</option>' +
+          '<option value="szuter">Szuter</option>' +
+          '<option value="parking">Parking</option>' +
+          '<option value="tor">Tor</option>' +
+          '<option value="inne">Inne</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label>Status</label>' +
+        '<div class="status-toggle">' +
+          '<div class="status-option selected-legal" id="statusLegal" onclick="pickStatus(\'legalna\')">Legalna</div>' +
+          '<div class="status-option" id="statusIllegal" onclick="pickStatus(\'illegal\')">Illegal</div>' +
+        '</div>' +
+        '<input type="hidden" id="fStatus" value="legalna">' +
+      '</div>' +
+      '<div class="form-group" id="fCheapEntryGroup">' +
+        '<label>Najtańszy wjazd</label>' +
+        '<input type="text" id="fCheapEntry" placeholder="np. 50 zł / sesja" maxlength="60">' +
+      '</div>' +
+      '<div class="form-group" id="fHeatGroup" style="display:none;">' +
+        '<label>Poziom przypału</label>' +
+        '<div class="siren-bar" id="fSirenBar">' +
+          '<span class="siren-icon" data-val="1" onclick="pickSiren(1)">🚨</span>' +
+          '<span class="siren-icon" data-val="2" onclick="pickSiren(2)">🚨</span>' +
+          '<span class="siren-icon" data-val="3" onclick="pickSiren(3)">🚨</span>' +
+          '<span class="siren-icon" data-val="4" onclick="pickSiren(4)">🚨</span>' +
+          '<span class="siren-icon" data-val="5" onclick="pickSiren(5)">🚨</span>' +
+          '<span class="siren-label" id="fSirenLabel">0 / 5</span>' +
+        '</div>' +
+        '<input type="hidden" id="fHeat" value="0">' +
+      '</div>' +
+      '<button type="submit" id="submitSpotBtn" class="btn-neon btn-pink" style="width:100%;margin-top:8px;">' +
+        'Zapisz miejscówkę' +
+      '</button>' +
+    '</form>';
+}
+function pickStatus(s) {
+  formStatus = s;
+  document.getElementById('fStatus').value = s;
+  document.getElementById('statusLegal').className = 'status-option' + (s === 'legalna' ? ' selected-legal' : '');
+  document.getElementById('statusIllegal').className = 'status-option' + (s === 'illegal' ? ' selected-illegal' : '');
+  // Toggle fields based on status
+  document.getElementById('fHeatGroup').style.display = s === 'illegal' ? 'block' : 'none';
+  document.getElementById('fCheapEntryGroup').style.display = s === 'legalna' ? 'block' : 'none';
+  if (s === 'legalna') pickSiren(0);
+}
+function pickSiren(val) {
+  formHeat = val;
+  var hi = document.getElementById('fHeat');
+  if (hi) hi.value = val;
+  document.querySelectorAll('#fSirenBar .siren-icon').forEach(function(el) {
+    var v = parseInt(el.dataset.val);
+    if (v <= val) el.classList.add('active'); else el.classList.remove('active');
+  });
+  var lbl = document.getElementById('fSirenLabel');
+  if (lbl) lbl.textContent = val + ' / 5';
+}
+async function handleSaveNewSpot(e, lat, lng) {
+  e.preventDefault();
+  var btn = document.getElementById('submitSpotBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner-sm"></span> Zapisywanie...';
+  try {
+    var status = document.getElementById('fStatus').value;
+    var cheapEntry = '';
+    if (status === 'legalna') {
+      var ce = document.getElementById('fCheapEntry');
+      if (ce) cheapEntry = ce.value.trim();
+    }
+    await saveSpotToFirestore({
+      title: document.getElementById('fTitle').value.trim(),
+      desc: document.getElementById('fDesc').value.trim(),
+      type: document.getElementById('fType').value,
+      status: status,
+      heat: parseInt(document.getElementById('fHeat').value) || 0,
+      cheapEntry: cheapEntry,
+      lat: lat, lng: lng
+    });
+    closeSidePanel();
+    showToast('Miejscówka dodana! +5 pkt');
+    map.flyTo([lat, lng], 14, { duration: 0.6 });
+  } catch(err) {
+    console.error('Save error:', err);
+    showToast('Błąd: ' + err.message);
+    btn.disabled = false;
+    btn.innerHTML = 'Zapisz miejscówkę';
+  }
+}
+/* ============================================
+   SPOT DETAIL (async, lazy loaded)
+   ============================================ */
+async function openSpotDetail(id) {
+  map.closePopup();
+  currentDetailSpotId = id;
+  openSidePanel('Szczegóły');
+  var body = document.getElementById('spBody');
+  body.innerHTML = '<div class="detail-loading"><div class="loading-spinner"></div><p>Ładowanie szczegółów...</p></div>';
+  var userRating = getMyRating(id);
+  try {
+    // Parallel: load detail + comments
+    var results = await Promise.all([
+      loadSpotDetail(id),
+      getCommentsFromFirestore(id)
+    ]);
+    var spot = results[0];
+    var comments = results[1];
+    if (currentDetailSpotId !== id) return; // panel closed or switched
+    if (!spot) {
+      body.innerHTML = '<div class="detail-loading"><p style="color:var(--neon-pink);">Miejscówka nie znaleziona</p></div>';
+      return;
+    }
+    renderSpotDetail(spot, userRating, comments);
+  } catch(err) {
+    console.error('Detail error:', err);
+    if (currentDetailSpotId === id) {
+      body.innerHTML = '<div class="detail-loading"><p style="color:var(--neon-pink);">Błąd ładowania</p><p style="font-size:12px;color:var(--text-dim);margin-top:8px;">' + escHtml(err.message) + '</p></div>';
+    }
+  }
+}
+function renderSpotDetail(spot, userRating, comments) {
+  var avgRating = spot.ratingCount > 0 ? spot.ratingSum / spot.ratingCount : 0;
+  var totalRatings = spot.ratingCount || 0;
+  var avgStarsHtml = '';
+  for (var i = 1; i <= 5; i++) {
+    avgStarsHtml += '<span class="avg-star' + (i <= Math.round(avgRating) ? ' filled' : '') + '">★</span>';
+  }
+  var userStarsHtml = '';
+  for (var j = 1; j <= 5; j++) {
+    userStarsHtml += '<span class="user-star' + (j <= userRating ? ' filled' : '') + '" data-val="' + j + '" onclick="handleRateSpot(\'' + spot.id + '\', ' + j + ')">★</span>';
+  }
+  var sirensHtml = '';
+  if (spot.status === 'illegal') {
+    sirensHtml = '<div class="detail-sirens">';
+    for (var k = 1; k <= 5; k++) {
+      sirensHtml += '<span class="siren-icon' + (k <= spot.heat ? ' active' : '') + '" style="cursor:default;">🚨</span>';
+    }
+    sirensHtml += '<span class="siren-label">' + spot.heat + '/5</span></div>';
+  }
+  // Cheap entry badge for legal spots
+  var cheapHtml = '';
+  if (spot.status === 'legalna' && spot.cheapEntry) {
+    cheapHtml = '<span class="detail-cheap-entry">💰 ' + escHtml(spot.cheapEntry) + '</span>';
+  }
+  var commentsHtml = '';
+  comments.forEach(function(c) {
+    commentsHtml +=
+      '<div class="comment-item">' +
+        '<div class="comment-text">' + escHtml(c.text) + '</div>' +
+        '<div class="comment-meta">' +
+          '<span>' + escHtml(c.userNick) + ' · ' + formatDate(c.date) + '</span>' +
+          '<span class="comment-report" onclick="openReportModal(\'comment\',\'' + spot.id + '\',\'' + c.id + '\')">' +
+            '<svg class="icon-svg" style="width:11px;height:11px;stroke:currentColor;" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>' +
+            ' zgłoś' +
+          '</span>' +
+        '</div>' +
+      '</div>';
+  });
+  var rl = totalRatings === 1 ? 'ocena' : (totalRatings >= 2 && totalRatings <= 4 ? 'oceny' : 'ocen');
+  var body = document.getElementById('spBody');
+  body.innerHTML =
+    '<div class="detail-spot-title">' + escHtml(spot.title) + '</div>' +
+    '<div class="detail-spot-type">' + escHtml(spot.type) + '</div>' +
+    '<div style="margin-bottom:12px;">' +
+      '<div class="detail-status-badge ' + (spot.status === 'illegal' ? 'badge-illegal' : 'badge-legal') + '">' +
+        (spot.status === 'illegal' ? 'ILLEGAL' : 'LEGALNA') +
+      '</div>' +
+      cheapHtml +
+    '</div>' +
+    sirensHtml +
+    (spot.desc ? '<div class="detail-desc">' + escHtml(spot.desc) + '</div>' : '') +
+    '<div class="divider"></div>' +
+    '<div class="section-label">Średnia ocena</div>' +
+    '<div class="avg-rating-box" id="avgRatingBox">' +
+      '<div class="avg-rating-number" id="avgRatingNumber">' + (totalRatings > 0 ? avgRating.toFixed(1) : '—') + '</div>' +
+      '<div class="avg-rating-stars" id="avgRatingStars">' + avgStarsHtml + '</div>' +
+      '<div class="avg-rating-count" id="avgRatingCount">' + totalRatings + ' ' + rl + '</div>' +
+    '</div>' +
+    '<div class="user-rating-section">' +
+      '<div class="user-rating-label">Twoja ocena</div>' +
+      '<div class="user-stars-row" id="userStarsRow">' + userStarsHtml + '</div>' +
+      '<div class="user-rating-note" id="userRatingNote">' +
+        (userRating > 0 ? 'Oceniłeś na ' + userRating + '/5 — kliknij aby zmienić' : 'Kliknij gwiazdkę aby ocenić') +
+      '</div>' +
+    '</div>' +
+    '<div class="divider"></div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+      '<span class="section-label" style="margin-bottom:0;" id="commentsLabel">Komentarze (' + comments.length + ')</span>' +
+      '<button class="btn-neon btn-ghost btn-sm" onclick="openReportModal(\'spot\',\'' + spot.id + '\',\'\')">' +
+        '<svg class="icon-svg icon-svg-sm" viewBox="0 0 24 24" style="stroke:currentColor;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>' +
+        ' Zgłoś' +
+      '</button>' +
+    '</div>' +
+    '<div id="commentsContainer">' + commentsHtml + '</div>' +
+    '<div class="comment-input-wrap">' +
+      '<input type="text" id="commentInput" placeholder="Dodaj komentarz..." maxlength="300" onkeydown="if(event.key===\'Enter\')handleAddComment(\'' + spot.id + '\')">' +
+      '<button class="btn-neon btn-pink btn-sm" id="commentSendBtn" onclick="handleAddComment(\'' + spot.id + '\')">' +
+        '<svg class="icon-svg icon-svg-sm" viewBox="0 0 24 24" style="stroke:#fff;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>' +
+      '</button>' +
+    '</div>';
+  setupUserStarHovers();
+}
+function updateAvgRatingInPlace(spot) {
+  var avgNum = document.getElementById('avgRatingNumber');
+  var avgStars = document.getElementById('avgRatingStars');
+  var avgCount = document.getElementById('avgRatingCount');
+  if (!avgNum || !avgStars || !avgCount) return;
+  var avg = spot.ratingCount > 0 ? spot.ratingSum / spot.ratingCount : 0;
+  var total = spot.ratingCount || 0;
+  avgNum.textContent = total > 0 ? avg.toFixed(1) : '—';
+  var html = '';
+  for (var i = 1; i <= 5; i++) {
+    html += '<span class="avg-star' + (i <= Math.round(avg) ? ' filled' : '') + '">★</span>';
+  }
+  avgStars.innerHTML = html;
+  var lbl = total === 1 ? 'ocena' : (total >= 2 && total <= 4 ? 'oceny' : 'ocen');
+  avgCount.textContent = total + ' ' + lbl;
+}
+function setupUserStarHovers() {
+  var row = document.getElementById('userStarsRow');
+  if (!row) return;
+  var stars = row.querySelectorAll('.user-star');
+  stars.forEach(function(star, idx) {
+    star.addEventListener('mouseenter', function() {
+      stars.forEach(function(s, i) {
+        if (i <= idx) { s.style.color = 'var(--neon-blue)'; s.style.textShadow = '0 0 14px rgba(0,240,255,0.6)'; }
+        else { s.style.color = ''; s.style.textShadow = ''; }
+      });
+    });
+    star.addEventListener('mouseleave', function() {
+      stars.forEach(function(s) { s.style.color = ''; s.style.textShadow = ''; });
+    });
+  });
+}
+/* ============================================
+   RATING HANDLER (optimistic)
+   ============================================ */
+async function handleRateSpot(spotId, val) {
+  var stars = document.querySelectorAll('#userStarsRow .user-star');
+  stars.forEach(function(s, i) {
+    if (i < val) s.classList.add('filled'); else s.classList.remove('filled');
+  });
+  var note = document.getElementById('userRatingNote');
+  if (note) note.textContent = 'Zapisywanie...';
+  try {
+    var isNew = await rateSpot(spotId, val);
+    if (note) note.textContent = 'Oceniłeś na ' + val + '/5 — kliknij aby zmienić';
+    // Update average from detail cache (optimistically updated by rateSpot)
+    if (detailCache[spotId]) {
+      updateAvgRatingInPlace(detailCache[spotId].data);
+    }
+    showToast(isNew ? 'Ocena dodana! +1 pkt' : 'Ocena zaktualizowana!');
+  } catch(err) {
+    showToast('Błąd oceny: ' + err.message);
+    var oldVal = getMyRating(spotId);
+    stars.forEach(function(s, i) {
+      if (i < oldVal) s.classList.add('filled'); else s.classList.remove('filled');
+    });
+    if (note) note.textContent = oldVal > 0 ? 'Oceniłeś na ' + oldVal + '/5' : 'Kliknij gwiazdkę aby ocenić';
+  }
+}
+/* ============================================
+   COMMENT HANDLER (optimistic)
+   ============================================ */
+async function handleAddComment(spotId) {
+  var input = document.getElementById('commentInput');
+  var text = input.value.trim();
+  if (!text) return;
+  var btn = document.getElementById('commentSendBtn');
+  btn.disabled = true;
+  input.disabled = true;
+  try {
+    var nc = await addCommentToFirestore(spotId, text);
+    var container = document.getElementById('commentsContainer');
+    if (container) {
+      var div = document.createElement('div');
+      div.className = 'comment-item';
+      div.innerHTML =
+        '<div class="comment-text">' + escHtml(nc.text) + '</div>' +
+        '<div class="comment-meta">' +
+          '<span>' + escHtml(nc.userNick) + ' · ' + formatDate(nc.date) + '</span>' +
+          '<span class="comment-report" onclick="openReportModal(\'comment\',\'' + spotId + '\',\'' + nc.id + '\')">' +
+            '<svg class="icon-svg" style="width:11px;height:11px;stroke:currentColor;" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>' +
+            ' zgłoś' +
+          '</span>' +
+        '</div>';
+      container.appendChild(div);
+    }
+    var label = document.getElementById('commentsLabel');
+    if (label && commentsCache[spotId]) {
+      label.textContent = 'Komentarze (' + commentsCache[spotId].comments.length + ')';
+    }
+    input.value = '';
+    input.disabled = false;
+    btn.disabled = false;
+    showToast('Komentarz dodany! +2 pkt');
+  } catch(err) {
+    showToast('Błąd: ' + err.message);
+    btn.disabled = false;
+    input.disabled = false;
+  }
+}
+/* ============================================
+   REPORT
+   ============================================ */
+var reportTarget = { type: '', spotId: '', commentId: '' };
+function openReportModal(type, spotId, commentId) {
+  reportTarget = { type: type, spotId: spotId, commentId: commentId };
+  document.getElementById('reportModal').classList.add('open');
+}
+function closeReportModal() {
+  document.getElementById('reportModal').classList.remove('open');
+}
+async function handleSubmitReport(reason) {
+  try {
+    await addReportToFirestore({
+      type: reportTarget.type,
+      targetId: reportTarget.type === 'comment' ? reportTarget.commentId : reportTarget.spotId,
+      spotId: reportTarget.spotId,
+      reason: reason
+    });
+    closeReportModal();
+    showToast('Zgłoszenie wysłane');
+  } catch(e) { showToast('Błąd: ' + e.message); }
+}
+/* ============================================
+   LOCATE USER
+   ============================================ */
+var userLocMarker = null;
+function locateUser() {
+  if (!navigator.geolocation) { showToast('Geolokalizacja niedostępna'); return; }
+  showToast('Szukam lokalizacji...');
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+    if (userLocMarker) map.removeLayer(userLocMarker);
+    userLocMarker = L.circleMarker([lat, lng], {
+      radius: 10, color: '#00f0ff', fillColor: '#00f0ff', fillOpacity: 0.5, weight: 3
+    }).addTo(map);
+    map.flyTo([lat, lng], 14, { duration: 0.8 });
+    showToast('Lokalizacja znaleziona');
+  }, function() {
+    showToast('Nie mogę ustalić lokalizacji');
+  }, { enableHighAccuracy: true, timeout: 8000 });
+}
+/* ============================================
+   UTILS
+   ============================================ */
+function escHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+function formatDate(ts) {
+  var d = new Date(ts);
+  return d.toLocaleDateString('pl-PL') + ' ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+}
+var toastTimer;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+/* ============================================
+   LOADING SCREEN
+   ============================================ */
+function hideLoadingScreen() {
+  var ls = document.getElementById('loadingScreen');
+  ls.classList.add('hidden');
+  setTimeout(function() { ls.style.display = 'none'; }, 700);
+}
+/* ============================================
+   APP STARTUP
+   ============================================ */
+async function startApp() {
+  try {
+    if (!initFirebase(firebaseConfig)) throw new Error('Firebase init failed');
+    // 1. Sync user (1 read)
+    await ensureUserDocument();
+    // 2. Version check & chunk load (1 read meta + 0-K reads chunks)
+    var result = await checkVersionAndLoadChunks();
+    // 3. Render
+    renderUserPanel();
+    renderMarkers();
+    // 4. Start polling (only when tab visible)
+    startPolling();
+    hideLoadingScreen();
+    if (result.hit) {
+      showToast(result.count + ' miejscówek (z cache)');
+    } else {
+      showToast(result.count + ' miejscówek załadowanych (' + (result.chunks || 0) + ' chunków)');
+    }
+  } catch(err) {
+    console.error('App error:', err);
+    hideLoadingScreen();
+    showToast('Błąd: ' + err.message);
+  }
+}
+/* ============================================
+   INIT
+   ============================================ */
+(async function() {
+  if (typeof firebase === 'undefined') {
+    hideLoadingScreen();
+    showToast('Firebase SDK nie załadowany');
+    return;
+  }
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === 'YOUR_API_KEY') {
+    hideLoadingScreen();
+    showToast('Wklej firebaseConfig!');
+    return;
+  }
+  await startApp();
+})();
+/* ============================================
+   GLOBAL EVENT LISTENERS
+   ============================================ */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeSidePanel();
+    closeReportModal();
+    cancelAddMode();
+    closeUserExpanded();
+  }
+});
+document.getElementById('sidePanel').addEventListener('wheel', function(e) { e.stopPropagation(); });
+</script>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
