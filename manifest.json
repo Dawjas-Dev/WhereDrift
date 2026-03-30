@@ -1,0 +1,12 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "fullscreen",
+  "name": "WhereDrift",
+  "orientation": "portrait",
+  "scope": "/",
+  "short_name": "WhereDrift",
+  "start_url": "https://dawjas-dev.github.io/WhereDrift/",
+  "theme_color": "#ffffff",
+  "id": "v.1"
+}
