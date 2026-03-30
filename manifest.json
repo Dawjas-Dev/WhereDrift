@@ -8,7 +8,7 @@
   "short_name": "WhereDrift",
   "start_url": "https://dawjas-dev.github.io/WhereDrift/",
   "theme_color": "#ffffff",
-  "id": "v.1"
+  "id": "v.1",
   "icons": [
   {
     "src": "icon/launchericon-512x512.png",
