@@ -4,15 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>WhereDrift</title>
-<link rel="manifest" href="manifest.json" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
- 
-
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -145,8 +141,8 @@ body {
   cursor: pointer; transition: all 0.25s; -webkit-tap-highlight-color: transparent;
 }
 .user-panel:active { transform: scale(0.96); }
-.user-info { line-height: 1.2; }
-.user-nick { font-family: 'Orbitron', sans-serif; font-size: 10px; color: var(--neon-blue); text-shadow: 0 0 6px rgba(0,240,255,0.4); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-info { line-height: 1.2; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.user-nick { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--neon-blue); text-shadow: 0 0 6px rgba(0,240,255,0.4); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-pts { font-size: 10px; color: var(--neon-pink); font-weight: 600; display: flex; align-items: center; gap: 3px; }
 .user-pts span { font-weight: 900; }
 .user-chevron { color: var(--text-dim); transition: transform 0.25s; }
@@ -266,7 +262,8 @@ body {
 /* Currency row */
 .currency-input-wrap { display: flex; align-items: center; gap: 0; }
 .currency-input-wrap input { border-radius: 10px 0 0 10px; border-right: none; flex: 1; }
-.currency-badge { background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.25); border-left: none; border-radius: 0 10px 10px 0; padding: 0 14px; height: 44px; display: flex; align-items: center; font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--neon-green); white-space: nowrap; flex-shrink: 0; }
+.currency-badge { background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.25); border-left: none; border-radius: 0 10px 10px 0; padding: 0 14px; height: 44px; display: flex; align-items: center; font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--neon-green); white-space: nowrap; flex-shrink: 0; transition: color 0.2s, background 0.2s; }
+.currency-badge.loading { color: var(--text-dim); border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); }
 
 /* BUTTONS */
 .btn-neon { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 11px 20px; border: none; border-radius: 10px; font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: all 0.25s; -webkit-tap-highlight-color: transparent; min-height: 44px; }
@@ -314,9 +311,11 @@ body {
 .detail-sirens .siren-icon.active { animation: sirenPulseSync 0.8s ease-in-out infinite; }
 
 /* ACTION BUTTONS ROW */
-.detail-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.detail-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 14px; }
 .detail-action-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: var(--text-main); font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: all 0.2s; min-height: 42px; -webkit-tap-highlight-color: transparent; }
 .detail-action-btn:active { transform: scale(0.95); }
+.detail-action-checkin { grid-column: 1 / -1; border-color: rgba(0,255,136,0.25); color: var(--neon-green); background: rgba(0,255,136,0.06); }
+.detail-action-checkin:active { background: rgba(0,255,136,0.15); box-shadow: 0 0 15px rgba(0,255,136,0.3); }
 .detail-action-nav { border-color: rgba(0,240,255,0.25); color: var(--neon-blue); background: rgba(0,240,255,0.06); }
 .detail-action-nav:active { background: rgba(0,240,255,0.15); }
 .detail-action-share { border-color: rgba(176,38,255,0.25); color: var(--neon-purple); background: rgba(176,38,255,0.06); }
@@ -367,7 +366,7 @@ body {
 .help-item-text { font-size: 13px; color: var(--text-main); line-height: 1.5; }
 .help-item-text strong { color: var(--neon-blue); }
 .help-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent); margin: 16px 0; }
-.help-suppi-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px; margin-top: 20px; background: linear-gradient(135deg, #f9a825, #ff6f00); color: #fff; border: none; border-radius: 12px; font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: all 0.25s; box-shadow: 0 0 20px rgba(255,160,0,0.3); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.help-suppi-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px; margin-top: 6px; background: linear-gradient(135deg, #f9a825, #ff6f00); color: #fff; border: none; border-radius: 12px; font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: all 0.25s; box-shadow: 0 0 20px rgba(255,160,0,0.3); text-decoration: none; -webkit-tap-highlight-color: transparent; }
 .help-suppi-btn:active { transform: scale(0.97); box-shadow: 0 0 30px rgba(255,160,0,0.5); }
 
 /* ADD MODE BANNER */
@@ -408,7 +407,6 @@ body {
   .user-star { font-size: 26px; }
   .sp-body { padding: 14px 14px 40px; }
   .detail-info-grid { gap: 7px; }
-  .detail-actions { grid-template-columns: 1fr 1fr; }
   .sp-header h2 { font-size: 20px; }
   .sp-header-subtitle { font-size: 12px; }
 }
@@ -416,7 +414,6 @@ body {
   .filter-panel { max-width: none; flex-wrap: nowrap; }
   .fab-add { width: 50px; height: 50px; }
   .user-expanded { width: calc(100vw - 16px); }
-  .detail-actions { grid-template-columns: 1fr; }
   .sp-header h2 { font-size: 18px; }
   .sp-header-subtitle { font-size: 11px; }
 }
@@ -438,7 +435,6 @@ body {
   <div class="user-info">
     <div class="user-nick" id="userNick"></div>
     <div class="user-pts">
-      <svg class="icon-svg" style="width:11px;height:11px;stroke:var(--neon-pink);fill:var(--neon-pink);"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9"/></svg>
       <span id="userPts">0</span> <span id="userPtsLabel">pkt</span>
     </div>
   </div>
@@ -555,12 +551,15 @@ body {
       <div class="help-item"><span class="help-item-icon">🔵</span><div class="help-item-text" id="helpHow3"><strong>Niebieskie markery</strong> = miejscówki legalne. <strong>Różowe</strong> = nielegalne (ryzyko).</div></div>
       <div class="help-item"><span class="help-item-icon">⭐</span><div class="help-item-text" id="helpHow4">W szczegółach możesz <strong>oceniać</strong> miejscówki i <strong>dodawać komentarze</strong> — za to dostajesz punkty!</div></div>
       <div class="help-item"><span class="help-item-icon">🧭</span><div class="help-item-text" id="helpHow5">Przycisk <strong>Nawiguj</strong> w szczegółach otwiera Google Maps z trasą do miejscówki.</div></div>
+      <div class="help-item"><span class="help-item-icon">📅</span><div class="help-item-text" id="helpHowBump"><strong>Podbijaj miejscówki</strong> (check-in), jeśli niedawno je odwiedziłeś, by inni wiedzieli, że nadal istnieją!</div></div>
     </div>
     <div class="help-section">
       <div class="help-section-title" id="helpPointsTitle">Punkty</div>
       <div class="help-item"><span class="help-item-icon">🏆</span><div class="help-item-text" id="helpPointsText">+5 pkt za dodanie miejscówki · +2 pkt za komentarz · +1 pkt za ocenę. Zbieraj punkty i wspinaj się w rankingu!</div></div>
     </div>
     <div class="help-divider"></div>
+    <div style="font-size: 16px; color: var(--text-dim); text-align: center; margin-bottom: 16px;" id="helpContact">Kontakt: dawjasdev@gmail.com</div>
+    <div style="font-size: 18px; color: var(--neon-pink); text-align: center; margin-bottom: 8px; font-weight: 700;" id="helpSupportPrompt">Podoba ci się? Wesprzyj mnie ⬇️</div>
     <a href="https://suppi.pl/gdziechlac" target="_blank" rel="noopener" class="help-suppi-btn" id="helpSuppiBtn">
       🍺 <span id="helpSuppiText">Postaw mi Piwo</span>
     </a>
@@ -582,11 +581,11 @@ var TRANSLATIONS = {
     "filters": { "all": "Wszystkie", "legal": "Legalne", "illegal": "Nielegalne" },
     "user": { "points_short": "pkt", "points": "Punkty", "spots": "Miejscówki", "comments": "Komentarze", "ratings": "Oceny", "your_id": "Twój identyfikator", "change_nick": "Zmień nick", "nick_min": "Nick min. 2 znaki", "nick_max": "Nick max 24 znaki", "nick_changed": "Nick zmieniony", "new_nick_placeholder": "Nowy nick", "nick_save": "Zapisz", "nick_cancel": "Anuluj", "rank_beginner": "Początkujący", "rank_rookie": "Rookie Drifter", "rank_street": "Street Racer", "rank_pro": "Pro Drifter", "rank_king": "Drift King" },
     "add": { "click_map": "Kliknij na mapę aby wybrać lokalizację", "new_spot": "Nowa miejscówka", "title": "Tytuł", "title_placeholder": "np. Parking pod Biedronką", "description": "Opis", "desc_placeholder": "Opisz miejscówkę...", "spot_type": "Typ miejscówki", "type_parking": "Parking", "type_square": "Plac", "type_dirt": "Szuter / Off-road", "type_road": "Droga publiczna", "type_track": "Tor", "type_other": "Inne", "status": "Status", "legal": "Legalna", "illegal": "Illegal", "cheapest_entry": "Najtańszy wjazd", "cheapest_entry_placeholder": "np. 50", "heat_level": "Poziom przypału", "save_spot": "Zapisz miejscówkę", "saving": "Zapisywanie...", "spot_added": "Miejscówka dodana! +5 pkt", "save_error": "Błąd zapisu" },
-    "detail": { "details": "Szczegóły", "not_found": "Miejscówka nie znaleziona", "loading": "Ładowanie szczegółów...", "load_error": "Błąd ładowania", "status_legal": "Legalna", "status_illegal": "Illegal", "cheapest_entry": "Najtańszy wjazd", "heat_level": "Poziom przypału", "description": "Opis", "avg_rating": "Średnia ocena", "your_rating": "Twoja ocena", "rating_saved": "Ocena dodana! +1 pkt", "rating_updated": "Ocena zaktualizowana!", "rating_error": "Błąd oceny", "click_to_rate": "Kliknij gwiazdkę aby ocenić", "you_rated": "Oceniłeś na", "click_to_change": "— kliknij aby zmienić", "saving_rating": "Zapisywanie...", "rating_word_1": "ocena", "rating_word_2_4": "oceny", "rating_word_5": "ocen", "comments": "Komentarze", "add_comment_placeholder": "Dodaj komentarz...", "comment_added": "Komentarz dodany! +2 pkt", "report": "Zgłoś", "report_comment": "zgłoś", "added_by": "Dodane przez", "date_added": "Data dodania", "navigate": "Nawiguj", "share": "Udostępnij", "share_copied": "Link skopiowany!", "share_not_supported": "Kopiowanie niedostępne" },
+    "detail": { "details": "Szczegóły", "not_found": "Miejscówka nie znaleziona", "loading": "Ładowanie szczegółów...", "load_error": "Błąd ładowania", "status_legal": "Legalna", "status_illegal": "Illegal", "cheapest_entry": "Najtańszy wjazd", "heat_level": "Poziom przypału", "description": "Opis", "avg_rating": "Średnia ocena", "your_rating": "Twoja ocena", "rating_saved": "Ocena dodana! +1 pkt", "rating_updated": "Ocena zaktualizowana!", "rating_error": "Błąd oceny", "click_to_rate": "Kliknij gwiazdkę aby ocenić", "you_rated": "Oceniłeś na", "click_to_change": "— kliknij aby zmienić", "saving_rating": "Zapisywanie...", "rating_word_1": "ocena", "rating_word_2_4": "oceny", "rating_word_5": "ocen", "comments": "Komentarze", "add_comment_placeholder": "Dodaj komentarz...", "comment_added": "Komentarz dodany! +2 pkt", "report": "Zgłoś", "report_comment": "zgłoś", "added_by": "Dodane przez", "date_added": "Data dodania", "navigate": "Nawiguj", "share": "Udostępnij", "share_copied": "Link skopiowany!", "share_not_supported": "Kopiowanie niedostępne", "check_in": "Podbij miejscówkę", "checkin_prompt": "Byłeś ostatnio? Miejscówka dalej istnieje? Podbij ją!", "last_visited": "Ostatnio odwiedzono", "never": "Brak danych", "just_now": "Przed chwilą", "minutes_ago": "min. temu", "hours_ago": "godz. temu", "days_ago": "dni temu", "day_ago": "dzień temu", "check_in_success": "Miejscówka podbita!" },
     "report": { "title": "Zgłoś", "not_exists": "Nie istnieje", "private_land": "Prywatny teren", "spam": "Spam", "cancel": "Anuluj", "sent": "Zgłoszenie wysłane" },
     "location": { "my_location": "Moja lokalizacja", "change_map": "Zmień mapę", "add_spot": "Dodaj miejscówkę", "zoom_in": "Powiększ", "zoom_out": "Pomniejsz", "searching": "Szukam lokalizacji...", "found": "Lokalizacja znaleziona", "unavailable": "Geolokalizacja niedostępna", "cannot_find": "Nie mogę ustalić lokalizacji" },
     "language": { "label": "Język" },
-    "help": { "subtitle": "Mapa driftowych miejscówek", "what_title": "Co to jest?", "what_text": "WhereDrift to społecznościowa mapa <strong>miejscówek do driftu</strong> — parkingów, asfaltowych placów, torów i innych terenów gdzie można poszaleć bokiem.", "how_title": "Jak używać?", "how1": "<strong>Kliknij marker</strong> na mapie aby zobaczyć podstawowe info o miejscówce.", "how2": "Wciśnij <strong>przycisk +</strong> (prawy dół) i kliknij na mapie aby <strong>dodać nową miejscówkę</strong>.", "how3": "<strong>Niebieskie markery</strong> = miejscówki legalne. <strong>Różowe</strong> = nielegalne (ryzyko).", "how4": "W szczegółach możesz <strong>oceniać</strong> miejscówki i <strong>dodawać komentarze</strong> — za to dostajesz punkty!", "how5": "Przycisk <strong>Nawiguj</strong> w szczegółach otwiera Google Maps z trasą do miejscówki.", "points_title": "Punkty", "points_text": "+5 pkt za dodanie miejscówki · +2 pkt za komentarz · +1 pkt za ocenę. Zbieraj punkty i wspinaj się w rankingu!", "suppi": "Postaw mi Piwo", "close": "Zamknij" },
+    "help": { "subtitle": "Mapa driftowych miejscówek", "what_title": "Co to jest?", "what_text": "WhereDrift to społecznościowa mapa <strong>miejscówek do driftu</strong> — parkingów, asfaltowych placów, torów i innych terenów gdzie można poszaleć bokiem.", "how_title": "Jak używać?", "how1": "<strong>Kliknij marker</strong> na mapie aby zobaczyć podstawowe info o miejscówce.", "how2": "Wciśnij <strong>przycisk +</strong> (prawy dół) i kliknij na mapie aby <strong>dodać nową miejscówkę</strong>.", "how3": "<strong>Niebieskie markery</strong> = miejscówki legalne. <strong>Różowe</strong> = nielegalne (ryzyko).", "how4": "W szczegółach możesz <strong>oceniać</strong> miejscówki i <strong>dodawać komentarze</strong> — za to dostajesz punkty!", "how5": "Przycisk <strong>Nawiguj</strong> w szczegółach otwiera Google Maps z trasą do miejscówki.", "how_bump": "<strong>Podbijaj miejscówki</strong> (check-in), jeśli niedawno je odwiedziłeś, by inni wiedzieli, że nadal istnieją!", "contact": "Kontakt: dawjasdev@gmail.com", "support_prompt": "Podoba ci się? Wesprzyj mnie ⬇️", "points_title": "Punkty", "points_text": "+5 pkt za dodanie miejscówki · +2 pkt za komentarz · +1 pkt za ocenę. Zbieraj punkty i wspinaj się w rankingu!", "suppi": "Postaw mi Piwo", "close": "Zamknij" },
     "currency": { "code": "PLN", "symbol": "zł", "locale": "pl-PL", "iso": "PLN", "display": "zł" }
   },
   "en": {
@@ -594,23 +593,23 @@ var TRANSLATIONS = {
     "filters": { "all": "All", "legal": "Legal", "illegal": "Illegal" },
     "user": { "points_short": "pts", "points": "Points", "spots": "Spots", "comments": "Comments", "ratings": "Ratings", "your_id": "Your identifier", "change_nick": "Change nick", "nick_min": "Nick min. 2 chars", "nick_max": "Nick max 24 chars", "nick_changed": "Nick changed", "new_nick_placeholder": "New nick", "nick_save": "Save", "nick_cancel": "Cancel", "rank_beginner": "Beginner", "rank_rookie": "Rookie Drifter", "rank_street": "Street Racer", "rank_pro": "Pro Drifter", "rank_king": "Drift King" },
     "add": { "click_map": "Click on the map to select location", "new_spot": "New spot", "title": "Title", "title_placeholder": "e.g. Mall parking lot", "description": "Description", "desc_placeholder": "Describe the spot...", "spot_type": "Spot type", "type_parking": "Parking", "type_square": "Square / Plaza", "type_dirt": "Gravel / Off-road", "type_road": "Public road", "type_track": "Race track", "type_other": "Other", "status": "Status", "legal": "Legal", "illegal": "Illegal", "cheapest_entry": "Cheapest entry", "cheapest_entry_placeholder": "e.g. 50", "heat_level": "Heat level", "save_spot": "Save spot", "saving": "Saving...", "spot_added": "Spot added! +5 pts", "save_error": "Save error" },
-    "detail": { "details": "Details", "not_found": "Spot not found", "loading": "Loading details...", "load_error": "Loading error", "status_legal": "Legal", "status_illegal": "Illegal", "cheapest_entry": "Cheapest entry", "heat_level": "Heat level", "description": "Description", "avg_rating": "Average rating", "your_rating": "Your rating", "rating_saved": "Rating added! +1 pt", "rating_updated": "Rating updated!", "rating_error": "Rating error", "click_to_rate": "Click a star to rate", "you_rated": "You rated", "click_to_change": "— click to change", "saving_rating": "Saving...", "rating_word_1": "rating", "rating_word_2_4": "ratings", "rating_word_5": "ratings", "comments": "Comments", "add_comment_placeholder": "Add a comment...", "comment_added": "Comment added! +2 pts", "report": "Report", "report_comment": "report", "added_by": "Added by", "date_added": "Date added", "navigate": "Navigate", "share": "Share", "share_copied": "Link copied!", "share_not_supported": "Copy not available" },
+    "detail": { "details": "Details", "not_found": "Spot not found", "loading": "Loading details...", "load_error": "Loading error", "status_legal": "Legal", "status_illegal": "Illegal", "cheapest_entry": "Cheapest entry", "heat_level": "Heat level", "description": "Description", "avg_rating": "Average rating", "your_rating": "Your rating", "rating_saved": "Rating added! +1 pt", "rating_updated": "Rating updated!", "rating_error": "Rating error", "click_to_rate": "Click a star to rate", "you_rated": "You rated", "click_to_change": "— click to change", "saving_rating": "Saving...", "rating_word_1": "rating", "rating_word_2_4": "ratings", "rating_word_5": "ratings", "comments": "Comments", "add_comment_placeholder": "Add a comment...", "comment_added": "Comment added! +2 pts", "report": "Report", "report_comment": "report", "added_by": "Added by", "date_added": "Date added", "navigate": "Navigate", "share": "Share", "share_copied": "Link copied!", "share_not_supported": "Copy not available", "check_in": "Check in (Bump)", "checkin_prompt": "Been here recently? Spot still exists? Bump it!", "last_visited": "Last visited", "never": "No data", "just_now": "Just now", "minutes_ago": "mins ago", "hours_ago": "hours ago", "days_ago": "days ago", "day_ago": "day ago", "check_in_success": "Spot bumped!" },
     "report": { "title": "Report", "not_exists": "Doesn't exist", "private_land": "Private property", "spam": "Spam", "cancel": "Cancel", "sent": "Report sent" },
     "location": { "my_location": "My location", "change_map": "Change map", "add_spot": "Add spot", "zoom_in": "Zoom in", "zoom_out": "Zoom out", "searching": "Searching location...", "found": "Location found", "unavailable": "Geolocation unavailable", "cannot_find": "Cannot determine location" },
     "language": { "label": "Language" },
-    "help": { "subtitle": "Drift spots community map", "what_title": "What is this?", "what_text": "WhereDrift is a community map of <strong>drift spots</strong> — parking lots, asphalt squares, tracks and other areas where you can slide sideways.", "how_title": "How to use?", "how1": "<strong>Click a marker</strong> on the map to see basic info about a spot.", "how2": "Press the <strong>+ button</strong> (bottom right) and click on the map to <strong>add a new spot</strong>.", "how3": "<strong>Blue markers</strong> = legal spots. <strong>Pink</strong> = illegal (risky).", "how4": "In details you can <strong>rate</strong> spots and <strong>add comments</strong> — you earn points for that!", "how5": "The <strong>Navigate</strong> button in details opens Google Maps with directions to the spot.", "points_title": "Points", "points_text": "+5 pts for adding a spot · +2 pts for a comment · +1 pt for a rating. Collect points and climb the ranks!", "suppi": "Buy me a Beer", "close": "Close" },
-    "currency": { "code": "GBP", "symbol": "£", "locale": "en-GB", "iso": "GBP", "display": "£" }
+    "help": { "subtitle": "Drift spots community map", "what_title": "What is this?", "what_text": "WhereDrift is a community map of <strong>drift spots</strong> — parking lots, asphalt squares, tracks and other areas where you can slide sideways.", "how_title": "How to use?", "how1": "<strong>Click a marker</strong> on the map to see basic info about a spot.", "how2": "Press the <strong>+ button</strong> (bottom right) and click on the map to <strong>add a new spot</strong>.", "how3": "<strong>Blue markers</strong> = legal spots. <strong>Pink</strong> = illegal (risky).", "how4": "In details you can <strong>rate</strong> spots and <strong>add comments</strong> — you earn points for that!", "how5": "The <strong>Navigate</strong> button in details opens Google Maps with directions to the spot.", "how_bump": "<strong>Bump spots</strong> (check-in) if you visited them recently, so others know they still exist!", "contact": "Contact:dawjasdev@gmail.com", "support_prompt": "Like it? Support me ⬇️", "points_title": "Points", "points_text": "+5 pts for adding a spot · +2 pts for a comment · +1 pt for a rating. Collect points and climb the ranks!", "suppi": "Buy me a Beer", "close": "Close" },
+    "currency": { "code": "USD", "symbol": "$", "locale": "en-US", "iso": "USD", "display": "$" }
   },
   "de": {
     "app": { "title": "WhereDrift", "loading": "Verbindung zur Datenbank...", "spots_cached": "Spots (aus Cache)", "spots_loaded": "Spots geladen", "chunks": "Chunks", "map_updated": "Karte aktualisiert", "spots": "Spots", "firebase_not_loaded": "Firebase SDK nicht geladen", "paste_config": "firebaseConfig einfügen!", "error": "Fehler" },
     "filters": { "all": "Alle", "legal": "Legal", "illegal": "Illegal" },
     "user": { "points_short": "Pkt", "points": "Punkte", "spots": "Spots", "comments": "Kommentare", "ratings": "Bewertungen", "your_id": "Deine Kennung", "change_nick": "Nick ändern", "nick_min": "Nick min. 2 Zeichen", "nick_max": "Nick max 24 Zeichen", "nick_changed": "Nick geändert", "new_nick_placeholder": "Neuer Nick", "nick_save": "Speichern", "nick_cancel": "Abbrechen", "rank_beginner": "Anfänger", "rank_rookie": "Rookie Drifter", "rank_street": "Street Racer", "rank_pro": "Pro Drifter", "rank_king": "Drift King" },
     "add": { "click_map": "Klicke auf die Karte um Standort zu wählen", "new_spot": "Neuer Spot", "title": "Titel", "title_placeholder": "z.B. Parkplatz am Supermarkt", "description": "Beschreibung", "desc_placeholder": "Beschreibe den Spot...", "spot_type": "Spot-Typ", "type_parking": "Parkplatz", "type_square": "Platz", "type_dirt": "Schotter / Offroad", "type_road": "Öffentliche Straße", "type_track": "Rennstrecke", "type_other": "Sonstiges", "status": "Status", "legal": "Legal", "illegal": "Illegal", "cheapest_entry": "Günstigster Eintritt", "cheapest_entry_placeholder": "z.B. 50", "heat_level": "Risikostufe", "save_spot": "Spot speichern", "saving": "Speichern...", "spot_added": "Spot hinzugefügt! +5 Pkt", "save_error": "Speicherfehler" },
-    "detail": { "details": "Details", "not_found": "Spot nicht gefunden", "loading": "Details laden...", "load_error": "Ladefehler", "status_legal": "Legal", "status_illegal": "Illegal", "cheapest_entry": "Günstigster Eintritt", "heat_level": "Risikostufe", "description": "Beschreibung", "avg_rating": "Durchschnittsbewertung", "your_rating": "Deine Bewertung", "rating_saved": "Bewertung hinzugefügt! +1 Pkt", "rating_updated": "Bewertung aktualisiert!", "rating_error": "Bewertungsfehler", "click_to_rate": "Stern klicken zum Bewerten", "you_rated": "Bewertet mit", "click_to_change": "— klicken zum Ändern", "saving_rating": "Speichern...", "rating_word_1": "Bewertung", "rating_word_2_4": "Bewertungen", "rating_word_5": "Bewertungen", "comments": "Kommentare", "add_comment_placeholder": "Kommentar hinzufügen...", "comment_added": "Kommentar hinzugefügt! +2 Pkt", "report": "Melden", "report_comment": "melden", "added_by": "Hinzugefügt von", "date_added": "Hinzugefügt am", "navigate": "Navigieren", "share": "Teilen", "share_copied": "Link kopiert!", "share_not_supported": "Kopieren nicht verfügbar" },
+    "detail": { "details": "Details", "not_found": "Spot nicht gefunden", "loading": "Details laden...", "load_error": "Ladefehler", "status_legal": "Legal", "status_illegal": "Illegal", "cheapest_entry": "Günstigster Eintritt", "heat_level": "Risikostufe", "description": "Beschreibung", "avg_rating": "Durchschnittsbewertung", "your_rating": "Deine Bewertung", "rating_saved": "Bewertung hinzugefügt! +1 Pkt", "rating_updated": "Bewertung aktualisiert!", "rating_error": "Bewertungsfehler", "click_to_rate": "Stern klicken zum Bewerten", "you_rated": "Bewertet mit", "click_to_change": "— klicken zum Ändern", "saving_rating": "Speichern...", "rating_word_1": "Bewertung", "rating_word_2_4": "Bewertungen", "rating_word_5": "Bewertungen", "comments": "Kommentare", "add_comment_placeholder": "Kommentar hinzufügen...", "comment_added": "Kommentar hinzugefügt! +2 Pkt", "report": "Melden", "report_comment": "melden", "added_by": "Hinzugefügt von", "date_added": "Hinzugefügt am", "navigate": "Navigieren", "share": "Teilen", "share_copied": "Link kopiert!", "share_not_supported": "Kopieren nicht verfügbar", "check_in": "Check-in (Bump)", "checkin_prompt": "Warst du in letzter Zeit hier? Existiert der Spot noch? Push ihn!", "last_visited": "Zuletzt besucht", "never": "Keine Daten", "just_now": "Gerade eben", "minutes_ago": "Min. her", "hours_ago": "Std. her", "days_ago": "Tage her", "day_ago": "Tag her", "check_in_success": "Spot gepusht!" },
     "report": { "title": "Melden", "not_exists": "Existiert nicht", "private_land": "Privatgrundstück", "spam": "Spam", "cancel": "Abbrechen", "sent": "Meldung gesendet" },
     "location": { "my_location": "Mein Standort", "change_map": "Karte wechseln", "add_spot": "Spot hinzufügen", "zoom_in": "Vergrößern", "zoom_out": "Verkleinern", "searching": "Standort suchen...", "found": "Standort gefunden", "unavailable": "Geolokalisierung nicht verfügbar", "cannot_find": "Standort kann nicht bestimmt werden" },
     "language": { "label": "Sprache" },
-    "help": { "subtitle": "Community-Karte für Drift-Spots", "what_title": "Was ist das?", "what_text": "WhereDrift ist eine Community-Karte für <strong>Drift-Spots</strong> — Parkplätze, Asphaltplätze, Strecken und andere Bereiche wo man seitlich fahren kann.", "how_title": "Wie benutzen?", "how1": "<strong>Klicke einen Marker</strong> auf der Karte für Basisinfos zum Spot.", "how2": "Drücke den <strong>+ Knopf</strong> (rechts unten) und klicke auf die Karte um einen <strong>neuen Spot hinzuzufügen</strong>.", "how3": "<strong>Blaue Marker</strong> = legale Spots. <strong>Rosa</strong> = illegal (riskant).", "how4": "In den Details kannst du Spots <strong>bewerten</strong> und <strong>kommentieren</strong> — dafür gibt es Punkte!", "how5": "Der <strong>Navigieren</strong>-Button öffnet Google Maps mit der Route zum Spot.", "points_title": "Punkte", "points_text": "+5 Pkt für einen neuen Spot · +2 Pkt für Kommentar · +1 Pkt für Bewertung. Sammle Punkte und steige im Rang!", "suppi": "Kauf mir ein Bier", "close": "Schließen" },
+    "help": { "subtitle": "Community-Karte für Drift-Spots", "what_title": "Was ist das?", "what_text": "WhereDrift ist eine Community-Karte für <strong>Drift-Spots</strong> — Parkplätze, Asphaltplätze, Strecken und andere Bereiche wo man seitlich fahren kann.", "how_title": "Wie benutzen?", "how1": "<strong>Klicke einen Marker</strong> auf der Karte für Basisinfos zum Spot.", "how2": "Drücke den <strong>+ Knopf</strong> (rechts unten) und klicke auf die Karte um einen <strong>neuen Spot hinzuzufügen</strong>.", "how3": "<strong>Blaue Marker</strong> = legale Spots. <strong>Rosa</strong> = illegal (riskant).", "how4": "In den Details kannst du Spots <strong>bewerten</strong> und <strong>kommentieren</strong> — dafür gibt es Punkte!", "how5": "Der <strong>Navigieren</strong>-Button öffnet Google Maps mit der Route zum Spot.", "how_bump": "<strong>Pushe Spots</strong> (Check-in), wenn du vor kurzem dort warst, damit andere wissen, dass sie noch existieren!", "contact": "Kontakt: dawjasdev@gmail.com", "support_prompt": "Gefällt es dir? Unterstütze mich ⬇️", "points_title": "Punkte", "points_text": "+5 Pkt für einen neuen Spot · +2 Pkt für Kommentar · +1 Pkt für Bewertung. Sammle Punkte und steige im Rang!", "suppi": "Kauf mir ein Bier", "close": "Schließen" },
     "currency": { "code": "EUR", "symbol": "€", "locale": "de-DE", "iso": "EUR", "display": "€" }
   }
 };
@@ -689,6 +688,9 @@ function applyTranslations() {
   el('helpHow3').innerHTML = t('help.how3');
   el('helpHow4').innerHTML = t('help.how4');
   el('helpHow5').innerHTML = t('help.how5');
+  el('helpHowBump').innerHTML = t('help.how_bump');
+  el('helpContact').textContent = t('help.contact');
+  el('helpSupportPrompt').textContent = t('help.support_prompt');
   el('helpPointsTitle').textContent = t('help.points_title');
   el('helpPointsText').textContent = t('help.points_text');
   el('helpSuppiText').textContent = t('help.suppi');
@@ -872,6 +874,7 @@ async function loadSpotDetail(spotId) {
     status: d.status || 'legalna', heat: d.heat || 0, lat: d.lat || 0, lng: d.lng || 0,
     cheapEntry: d.cheapEntry || '', authorId: d.authorId || '', authorNick: d.authorNick || '',
     createdAt: d.createdAt ? d.createdAt.toMillis() : Date.now(),
+    lastVisitedAt: d.lastVisitedAt ? d.lastVisitedAt.toMillis() : (d.createdAt ? d.createdAt.toMillis() : Date.now()),
     ratingSum: d.ratingSum || 0, ratingCount: d.ratingCount || 0, commentCount: d.commentCount || 0,
     lang: d.lang || 'pl'
   };
@@ -925,6 +928,7 @@ async function saveSpotToFirestore(spotData) {
     cheapEntry: spotData.cheapEntry || '',
     authorId: user.id, authorNick: user.nick,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    lastVisitedAt: firebase.firestore.FieldValue.serverTimestamp(),
     ratingSum: 0, ratingCount: 0, commentCount: 0,
     lang: currentLang
   });
@@ -967,11 +971,55 @@ async function rateSpot(spotId, newValue) {
 }
 
 /* ============================================
-   REPORTS
+   REPORTS & CHECK-INS
    ============================================ */
+var reportTarget = { type: '', spotId: '', commentId: '' };
+function openReportModal(type, spotId, commentId) { 
+  reportTarget = { type: type, spotId: spotId, commentId: commentId }; 
+  document.getElementById('reportModal').classList.add('open'); 
+}
+
+function closeReportModal() { 
+  document.getElementById('reportModal').classList.remove('open'); 
+}
+
 async function addReportToFirestore(reportData) {
   var user = getLocalUser();
   await db.collection('reports').add({ type: reportData.type, targetId: reportData.targetId, spotId: reportData.spotId, reason: reportData.reason, reporterId: user.id, reporterNick: user.nick, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
+
+async function handleSubmitReport(reason) {
+  try {
+    await addReportToFirestore({ type: reportTarget.type, targetId: reportTarget.type === 'comment' ? reportTarget.commentId : reportTarget.spotId, spotId: reportTarget.spotId, reason: reason });
+    closeReportModal(); showToast(t('report.sent'));
+  } catch(e) { showToast(t('app.error') + ': ' + e.message); }
+}
+
+async function handleCheckIn(spotId) {
+  var btn = document.getElementById('checkInBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading-spinner-sm"></span>'; }
+  try {
+    await db.collection('spots').doc(spotId).update({
+      lastVisitedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    if (detailCache[spotId]) { detailCache[spotId].data.lastVisitedAt = Date.now(); }
+    showToast(t('detail.check_in_success'));
+    
+    var spot = detailCache[spotId].data;
+    var lv = document.getElementById('lastVisitedValue');
+    if (lv) lv.textContent = timeAgo(spot.lastVisitedAt);
+    
+    if (btn) {
+      btn.innerHTML = '✅ ' + t('detail.check_in_success');
+      btn.style.opacity = '0.5';
+    }
+  } catch(e) {
+    showToast(t('app.error') + ': ' + e.message);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg class="icon-svg icon-svg-sm" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + t('detail.check_in');
+    }
+  }
 }
 
 /* ============================================
@@ -1051,12 +1099,37 @@ function setFilter(f, btn) {
 }
 
 /* ============================================
-   ADD MODE
+   ADD MODE & GEO CURRENCY
    ============================================ */
 var addModeActive = false;
 function enterAddMode() { if (addModeActive) { cancelAddMode(); return; } addModeActive = true; document.getElementById('addBanner').classList.add('show'); document.body.classList.add('add-mode-cursor'); }
 function cancelAddMode() { addModeActive = false; document.getElementById('addBanner').classList.remove('show'); document.body.classList.remove('add-mode-cursor'); }
 map.on('click', function(e) { if (!addModeActive) return; cancelAddMode(); openAddForm(e.latlng.lat, e.latlng.lng); });
+
+async function fetchCurrencyForLocation(lat, lng) {
+  var currDisplay = t('currency.display'); // fallback na język użytkownika
+  try {
+    var res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=3&accept-language=en`);
+    var data = await res.json();
+    var cc = (data.address && data.address.country_code) ? data.address.country_code.toLowerCase() : '';
+    
+    // Mapa kodów krajów na lokalne symbole walut
+    var cMap = {
+      'pl':'zł', 'de':'€', 'us':'$', 'gb':'£', 'cz':'Kč', 'sk':'€',
+      'ua':'₴', 'se':'kr', 'no':'kr', 'dk':'kr', 'ch':'CHF',
+      'at':'€', 'nl':'€', 'be':'€', 'fr':'€', 'it':'€', 'es':'€', 'ie':'€', 'fi':'€'
+    };
+    if (cMap[cc]) currDisplay = cMap[cc];
+  } catch(e) {}
+  
+  var badge = document.getElementById('fCurrencyBadge');
+  var hiddenInput = document.getElementById('fCurrencySymbol');
+  if(badge) {
+    badge.textContent = currDisplay;
+    badge.classList.remove('loading');
+  }
+  if(hiddenInput) hiddenInput.value = currDisplay;
+}
 
 /* ============================================
    SIDE PANEL
@@ -1180,7 +1253,7 @@ function openAddForm(lat, lng) {
   openSidePanel(t('add.new_spot'));
   formStatus = 'legalna'; formHeat = 0;
   var typeOptions = getSpotTypes().map(function(tp) { return '<option value="' + tp.value + '">' + tp.label + '</option>'; }).join('');
-  var currDisplay = t('currency.display');
+  
   document.getElementById('spBody').innerHTML =
     '<form id="addSpotForm" onsubmit="handleSaveNewSpot(event,' + lat + ',' + lng + ')">' +
       '<div class="form-group"><label>' + t('add.title') + '</label><input type="text" id="fTitle" required maxlength="60" placeholder="' + escAttr(t('add.title_placeholder')) + '"></div>' +
@@ -1197,7 +1270,8 @@ function openAddForm(lat, lng) {
         '<label>' + t('add.cheapest_entry') + '</label>' +
         '<div class="currency-input-wrap">' +
           '<input type="number" id="fCheapEntry" placeholder="' + escAttr(t('add.cheapest_entry_placeholder')) + '" min="0" step="1">' +
-          '<div class="currency-badge">' + currDisplay + '</div>' +
+          '<div class="currency-badge loading" id="fCurrencyBadge">...</div>' +
+          '<input type="hidden" id="fCurrencySymbol" value="">' +
         '</div>' +
       '</div>' +
       '<div class="form-group" id="fHeatGroup" style="display:none;">' +
@@ -1210,7 +1284,11 @@ function openAddForm(lat, lng) {
       '</div>' +
       '<button type="submit" id="submitSpotBtn" class="btn-neon btn-pink" style="width:100%;margin-top:10px;">' + t('add.save_spot') + '</button>' +
     '</form>';
+    
+  // Async fetch dla lokalnej waluty po wyrenderowaniu
+  fetchCurrencyForLocation(lat, lng);
 }
+
 function pickStatus(s) {
   formStatus = s;
   document.getElementById('fStatus').value = s;
@@ -1220,6 +1298,7 @@ function pickStatus(s) {
   document.getElementById('fCheapEntryGroup').style.display = s === 'legalna' ? 'block' : 'none';
   if (s === 'legalna') pickSiren(0);
 }
+
 function pickSiren(val) {
   formHeat = val;
   var hi = document.getElementById('fHeat'); if (hi) hi.value = val;
@@ -1229,6 +1308,7 @@ function pickSiren(val) {
   });
   var lbl = document.getElementById('fSirenLabel'); if (lbl) lbl.textContent = val + ' / 5';
 }
+
 async function handleSaveNewSpot(e, lat, lng) {
   e.preventDefault();
   var btn = document.getElementById('submitSpotBtn');
@@ -1238,13 +1318,15 @@ async function handleSaveNewSpot(e, lat, lng) {
     var status = document.getElementById('fStatus').value;
     var cheapEntry = '';
     
-    // Waluta zapisuje się wraz ze stawką do bazy jako gotowy string (np "50 zł")
+    // Waluta zapisuje się wraz ze stawką do bazy jako gotowy string
     if (status === 'legalna') { 
       var ce = document.getElementById('fCheapEntry'); 
+      var sym = document.getElementById('fCurrencySymbol');
+      var disp = (sym && sym.value) ? sym.value : t('currency.display');
       if (ce && ce.value) {
         var parsedVal = parseFloat(ce.value);
         if (!isNaN(parsedVal)) {
-          cheapEntry = parsedVal + ' ' + t('currency.display');
+          cheapEntry = parsedVal + ' ' + disp;
         } else {
           cheapEntry = ce.value.trim();
         }
@@ -1297,10 +1379,25 @@ async function openSpotDetail(id) {
     if (currentDetailSpotId === id) body.innerHTML = '<div class="detail-loading"><p style="color:var(--neon-pink);">' + t('detail.load_error') + '</p><p style="font-size:12px;color:var(--text-dim);margin-top:8px;">' + escHtml(err.message) + '</p></div>';
   }
 }
+
 function getRatingWord(total) {
   if (total === 1) return t('detail.rating_word_1');
   if (total >= 2 && total <= 4) return t('detail.rating_word_2_4');
   return t('detail.rating_word_5');
+}
+
+function timeAgo(ts) {
+  if (!ts) return t('detail.never');
+  var diff = Date.now() - ts;
+  if (diff < 0) diff = 0;
+  var mins = Math.floor(diff / 60000);
+  if (mins < 5) return t('detail.just_now');
+  if (mins < 60) return mins + ' ' + t('detail.minutes_ago');
+  var hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + ' ' + t('detail.hours_ago');
+  var days = Math.floor(hours / 24);
+  if (days === 1) return '1 ' + t('detail.day_ago');
+  return days + ' ' + t('detail.days_ago');
 }
 
 /* ============================================
@@ -1324,7 +1421,6 @@ function renderSpotDetail(spot, userRating, comments) {
   var infoCards = '';
   infoCards += '<div class="detail-info-card"><div class="detail-info-label">📌 Status</div><div class="detail-info-value">' + statusPill + '</div></div>';
   if (isLegal && spot.cheapEntry) {
-    // Waluta jest już odpowiednio sformatowana w stringu (np. "50 zł") przy dodawaniu
     infoCards += '<div class="detail-info-card"><div class="detail-info-label">💰 ' + t('detail.cheapest_entry') + '</div><div class="detail-info-value price">' + escHtml(spot.cheapEntry) + '</div></div>';
   }
   if (!isLegal) {
@@ -1333,6 +1429,8 @@ function renderSpotDetail(spot, userRating, comments) {
     sirensH += '</div>';
     infoCards += '<div class="detail-info-card"><div class="detail-info-label">🚨 ' + t('detail.heat_level') + '</div><div class="detail-info-value">' + sirensH + '<span style="font-size:11px;color:var(--neon-pink);margin-top:3px;display:block;">' + spot.heat + '/5</span></div></div>';
   }
+  
+  infoCards += '<div class="detail-info-card"><div class="detail-info-label">🕒 ' + t('detail.last_visited') + '</div><div class="detail-info-value" id="lastVisitedValue" style="font-size:13px;">' + timeAgo(spot.lastVisitedAt) + '</div></div>';
   infoCards += '<div class="detail-info-card"><div class="detail-info-label">👤 ' + t('detail.added_by') + '</div><div class="detail-info-value" style="font-size:13px;">' + escHtml(spot.authorNick || '—') + '</div></div>';
   infoCards += '<div class="detail-info-card"><div class="detail-info-label">📅 ' + t('detail.date_added') + '</div><div class="detail-info-value" style="font-size:12px;">' + formatDateShort(spot.createdAt) + '</div></div>';
 
@@ -1374,6 +1472,11 @@ function renderSpotDetail(spot, userRating, comments) {
     '<div class="divider"></div>' +
 
     '<div class="detail-actions">' +
+      '<div style="grid-column: 1 / -1; text-align: center; font-size: 12px; color: var(--text-dim); margin-bottom: 4px;">' + t('detail.checkin_prompt') + ' <br><span style="font-size:16px;color:var(--neon-green);">⬇️</span></div>' +
+      '<button id="checkInBtn" class="detail-action-btn detail-action-checkin" onclick="handleCheckIn(\'' + spot.id + '\')">' +
+        '<svg class="icon-svg icon-svg-sm" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+        t('detail.check_in') +
+      '</button>' +
       '<a href="' + mapsUrl + '" target="_blank" rel="noopener" class="detail-action-btn detail-action-nav" onclick="event.stopPropagation()">' +
         '<svg class="icon-svg icon-svg-sm" viewBox="0 0 24 24"><polygon points="3,11 22,2 13,21 11,13"/></svg>' +
         t('detail.navigate') +
@@ -1493,19 +1596,6 @@ async function handleAddComment(spotId) {
 }
 
 /* ============================================
-   REPORT
-   ============================================ */
-var reportTarget = { type: '', spotId: '', commentId: '' };
-function openReportModal(type, spotId, commentId) { reportTarget = { type: type, spotId: spotId, commentId: commentId }; document.getElementById('reportModal').classList.add('open'); }
-function closeReportModal() { document.getElementById('reportModal').classList.remove('open'); }
-async function handleSubmitReport(reason) {
-  try {
-    await addReportToFirestore({ type: reportTarget.type, targetId: reportTarget.type === 'comment' ? reportTarget.commentId : reportTarget.spotId, spotId: reportTarget.spotId, reason: reason });
-    closeReportModal(); showToast(t('report.sent'));
-  } catch(e) { showToast(t('app.error') + ': ' + e.message); }
-}
-
-/* ============================================
    HELP MODAL
    ============================================ */
 function openHelpModal()  { document.getElementById('helpModal').classList.add('open'); }
@@ -1534,12 +1624,12 @@ function escHtml(str) { var d = document.createElement('div'); d.textContent = s
 function escAttr(str) { return (str || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function formatDate(ts) {
   var d = new Date(ts);
-  var locale = currentLang === 'de' ? 'de-DE' : (currentLang === 'en' ? 'en-GB' : 'pl-PL');
+  var locale = currentLang === 'de' ? 'de-DE' : (currentLang === 'en' ? 'en-US' : 'pl-PL');
   return d.toLocaleDateString(locale) + ' ' + d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }
 function formatDateShort(ts) {
   var d = new Date(ts);
-  var locale = currentLang === 'de' ? 'de-DE' : (currentLang === 'en' ? 'en-GB' : 'pl-PL');
+  var locale = currentLang === 'de' ? 'de-DE' : (currentLang === 'en' ? 'en-US' : 'pl-PL');
   return d.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 var toastTimer;
@@ -1597,11 +1687,5 @@ document.addEventListener('keydown', function(e) {
 });
 document.getElementById('sidePanel').addEventListener('wheel', function(e) { e.stopPropagation(); });
 </script>
-
-
-
-
-  
-  
 </body>
 </html>
